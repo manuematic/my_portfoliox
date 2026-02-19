@@ -1,0 +1,13 @@
+{
+  "domain": "my_portfolio",
+  "name": "Mein Portfolio",
+  "version": "1.0.0",
+  "documentation": "https://github.com/YOUR_USERNAME/my_portfolio",
+  "issue_tracker": "https://github.com/YOUR_USERNAME/my_portfolio/issues",
+  "codeowners": ["@YOUR_USERNAME"],
+  "requirements": ["beautifulsoup4==4.12.2", "aiohttp==3.9.1"],
+  "dependencies": [],
+  "after_dependencies": [],
+  "iot_class": "cloud_polling",
+  "config_flow": true
+}

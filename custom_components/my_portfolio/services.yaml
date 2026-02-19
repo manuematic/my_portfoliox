@@ -1,0 +1,165 @@
+add_stock:
+  name: Aktie hinzufügen
+  description: Fügt eine neue Aktie zum Portfolio hinzu.
+  fields:
+    entry_id:
+      name: Portfolio-ID
+      description: Die Config Entry ID des Portfolios (zu finden unter Einstellungen → Integrationen → Mein Portfolio → Info).
+      required: true
+      example: "abc123def456"
+      selector:
+        text:
+    kuerzel:
+      name: Kürzel
+      description: Das Börsenkürzel der Aktie (z.B. AAPL, SAP.DE, BTC-USD).
+      required: true
+      example: "AAPL"
+      selector:
+        text:
+    preis:
+      name: Kaufpreis
+      description: Kaufpreis pro Stück in der Handelswährung (5 Vor-, 3 Nachkommastellen).
+      required: true
+      example: 182.500
+      selector:
+        number:
+          min: 0
+          max: 99999
+          step: 0.001
+          mode: box
+    stueckzahl:
+      name: Stückzahl
+      description: Anzahl der gekauften Aktien (bis zu 6 Stellen).
+      required: true
+      example: 10
+      selector:
+        number:
+          min: 1
+          max: 999999
+          step: 1
+          mode: box
+    kaufdatum:
+      name: Kaufdatum
+      description: Datum des Kaufs.
+      required: true
+      example: "2024-01-15"
+      selector:
+        date:
+    limitoben:
+      name: Limit Oben
+      description: Kurs-Alarm, wenn der Kurs diesen Wert überschreitet.
+      required: false
+      example: 200.000
+      selector:
+        number:
+          min: 0
+          max: 99999
+          step: 0.001
+          mode: box
+    limitunten:
+      name: Limit Unten
+      description: Kurs-Alarm, wenn der Kurs diesen Wert unterschreitet.
+      required: false
+      example: 150.000
+      selector:
+        number:
+          min: 0
+          max: 99999
+          step: 0.001
+          mode: box
+
+update_stock:
+  name: Aktie aktualisieren
+  description: Ändert die Daten einer bestehenden Aktie im Portfolio.
+  fields:
+    entry_id:
+      name: Portfolio-ID
+      description: Die Config Entry ID des Portfolios.
+      required: true
+      example: "abc123def456"
+      selector:
+        text:
+    stock_id:
+      name: Aktien-ID
+      description: Die interne UUID der Aktie (aus den Entity-Attributen).
+      required: true
+      example: "550e8400-e29b-41d4-a716-446655440000"
+      selector:
+        text:
+    kuerzel:
+      name: Kürzel
+      description: Neues Börsenkürzel.
+      required: false
+      example: "MSFT"
+      selector:
+        text:
+    preis:
+      name: Kaufpreis
+      description: Neuer Kaufpreis pro Stück.
+      required: false
+      example: 190.000
+      selector:
+        number:
+          min: 0
+          max: 99999
+          step: 0.001
+          mode: box
+    stueckzahl:
+      name: Stückzahl
+      description: Neue Stückzahl.
+      required: false
+      example: 15
+      selector:
+        number:
+          min: 1
+          max: 999999
+          step: 1
+          mode: box
+    kaufdatum:
+      name: Kaufdatum
+      description: Neues Kaufdatum.
+      required: false
+      example: "2024-06-01"
+      selector:
+        date:
+    limitoben:
+      name: Limit Oben
+      description: Neues oberes Kurs-Limit.
+      required: false
+      example: 220.000
+      selector:
+        number:
+          min: 0
+          max: 99999
+          step: 0.001
+          mode: box
+    limitunten:
+      name: Limit Unten
+      description: Neues unteres Kurs-Limit.
+      required: false
+      example: 170.000
+      selector:
+        number:
+          min: 0
+          max: 99999
+          step: 0.001
+          mode: box
+
+remove_stock:
+  name: Aktie entfernen
+  description: Entfernt eine Aktie aus dem Portfolio.
+  fields:
+    entry_id:
+      name: Portfolio-ID
+      description: Die Config Entry ID des Portfolios.
+      required: true
+      example: "abc123def456"
+      selector:
+        text:
+    stock_id:
+      name: Aktien-ID
+      description: Die interne UUID der Aktie.
+      required: true
+      example: "550e8400-e29b-41d4-a716-446655440000"
+      selector:
+        text:

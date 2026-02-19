@@ -1,0 +1,10 @@
+{
+  "name": "Mein Portfolio",
+  "domain": "my_portfolio",
+  "documentation": "https://github.com/manuematic/mboerse",
+  "issue_tracker": "https://github.com/manuematic/mboerse/issues",
+  "codeowners": ["@manuematic"],
+  "requirements": [],
+  "iot_class": "cloud_polling",
+  "homeassistant": "2023.6.0"
+}

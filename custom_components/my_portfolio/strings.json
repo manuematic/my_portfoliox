@@ -1,0 +1,30 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Mein Portfolio",
+        "description": "Portfolio erstellen",
+        "data": {
+          "portfolio_name": "Portfolio-Name"
+        }
+      }
+    },
+    "abort": {
+      "already_configured": "Portfolio ist bereits konfiguriert"
+    },
+    "error": {
+      "cannot_connect": "Verbindung fehlgeschlagen",
+      "unknown": "Unbekannter Fehler"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Portfolio-Einstellungen",
+        "data": {
+          "scan_interval": "Aktualisierungsintervall (Minuten)"
+        }
+      }
+    }
+  }
+}

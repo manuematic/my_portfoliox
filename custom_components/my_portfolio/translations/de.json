@@ -1,0 +1,30 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Mein Portfolio",
+        "description": "Gib deinem Portfolio einen Namen.",
+        "data": {
+          "portfolio_name": "Portfolio-Name"
+        }
+      }
+    },
+    "abort": {
+      "already_configured": "Dieses Portfolio ist bereits konfiguriert."
+    },
+    "error": {
+      "cannot_connect": "Verbindung zu Yahoo Finance fehlgeschlagen.",
+      "unknown": "Unbekannter Fehler aufgetreten."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Portfolio-Einstellungen",
+        "data": {
+          "scan_interval": "Aktualisierungsintervall (Minuten)"
+        }
+      }
+    }
+  }
+}
