@@ -12,7 +12,7 @@ CONF_PORTFOLIO_NAME = "portfolio_name"
 CONF_SCAN_INTERVAL = "scan_interval"
 DEFAULT_SCAN_INTERVAL = 15  # minutes
 
-# Stock data keys
+# Stock attribute keys
 ATTR_KUERZEL = "kuerzel"
 ATTR_PREIS = "preis"
 ATTR_STUECKZAHL = "stueckzahl"
@@ -36,11 +36,6 @@ YAHOO_HEADERS = {
     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
     "Accept-Language": "de-DE,de;q=0.9,en-US;q=0.8,en;q=0.7",
 }
-
-# Services
-SERVICE_ADD_STOCK = "add_stock"
-SERVICE_REMOVE_STOCK = "remove_stock"
-SERVICE_UPDATE_STOCK = "update_stock"
 
 # Platforms
 PLATFORMS = ["sensor"]

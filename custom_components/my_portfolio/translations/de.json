@@ -2,29 +2,75 @@
   "config": {
     "step": {
       "user": {
-        "title": "Mein Portfolio",
-        "description": "Gib deinem Portfolio einen Namen.",
+        "title": "Portfolio erstellen",
+        "description": "Gib deinem Portfolio einen Namen und wähle das Aktualisierungsintervall.",
         "data": {
-          "portfolio_name": "Portfolio-Name"
+          "portfolio_name": "Portfolio-Name",
+          "scan_interval": "Aktualisierungsintervall"
         }
       }
     },
     "abort": {
-      "already_configured": "Dieses Portfolio ist bereits konfiguriert."
+      "already_configured": "Ein Portfolio mit diesem Namen existiert bereits."
     },
     "error": {
-      "cannot_connect": "Verbindung zu Yahoo Finance fehlgeschlagen.",
-      "unknown": "Unbekannter Fehler aufgetreten."
+      "invalid_name": "Bitte gib einen gültigen Portfolio-Namen ein."
     }
   },
   "options": {
     "step": {
       "init": {
-        "title": "Portfolio-Einstellungen",
+        "title": "Portfolio verwalten",
+        "description": "Aktien im Portfolio:\n{overview}",
+        "data": {
+          "action": "Aktion wählen"
+        }
+      },
+      "add_stock": {
+        "title": "Neue Aktie hinzufügen",
+        "data": {
+          "kuerzel": "Börsenkürzel (z.B. AAPL, SAP.DE)",
+          "preis": "Kaufpreis pro Stück",
+          "stueckzahl": "Stückzahl",
+          "kaufdatum": "Kaufdatum",
+          "limitoben": "Limit Oben (Alarm bei Überschreitung, 0 = kein Limit)",
+          "limitunten": "Limit Unten (Alarm bei Unterschreitung, 0 = kein Limit)"
+        }
+      },
+      "select_stock": {
+        "title": "Aktie wählen",
+        "data": {
+          "stock_id": "Aktie",
+          "action": "Aktion"
+        }
+      },
+      "edit_stock": {
+        "title": "Aktie bearbeiten: {kuerzel}",
+        "data": {
+          "kuerzel": "Börsenkürzel",
+          "preis": "Kaufpreis pro Stück",
+          "stueckzahl": "Stückzahl",
+          "kaufdatum": "Kaufdatum",
+          "limitoben": "Limit Oben",
+          "limitunten": "Limit Unten"
+        }
+      },
+      "confirm_delete": {
+        "title": "Aktie löschen",
+        "description": "Möchtest du die Aktie \"{kuerzel}\" wirklich aus dem Portfolio entfernen?",
+        "data": {
+          "confirm": "Ja, Aktie löschen"
+        }
+      },
+      "settings": {
+        "title": "Einstellungen",
         "data": {
           "scan_interval": "Aktualisierungsintervall (Minuten)"
         }
       }
+    },
+    "error": {
+      "invalid_kuerzel": "Bitte gib ein gültiges Börsenkürzel ein."
     }
   }
 }
