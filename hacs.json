@@ -1,9 +1,9 @@
 {
   "name": "Mein Portfolio",
   "domain": "my_portfolio",
-  "documentation": "https://github.com/YOUR_USERNAME/my_portfolio",
-  "issue_tracker": "https://github.com/YOUR_USERNAME/my_portfolio/issues",
-  "codeowners": ["@YOUR_USERNAME"],
+  "documentation": "https://github.com/manuematic/my_portfolio",
+  "issue_tracker": "https://github.com/manuematic/my_portfolio/issues",
+  "codeowners": ["@manuematic"],
   "requirements": [],
   "iot_class": "cloud_polling",
   "homeassistant": "2023.6.0"
