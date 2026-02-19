@@ -8,6 +8,7 @@ from homeassistant.components.sensor import SensorEntity, SensorStateClass
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity import DeviceInfo
+from homeassistant.helpers.device_registry import DeviceEntryType
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
@@ -96,7 +97,7 @@ class StockSensor(CoordinatorEntity[MyPortfolioCoordinator], SensorEntity):
             name=f"{NAME} – {coordinator.portfolio_name}",
             manufacturer="Mein Portfolio",
             model="Yahoo Finance",
-            entry_type="service",  # type: ignore[arg-type]
+            entry_type=DeviceEntryType.SERVICE,
         )
 
     @property

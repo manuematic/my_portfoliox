@@ -127,9 +127,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             stock_id = await coord.async_add_stock(stock_data)
             _LOGGER.info("Added stock %s (id=%s) to portfolio '%s'",
                          stock_data[ATTR_KUERZEL], stock_id, coord.portfolio_name)
-
-            # Reload sensor platform to register new entity
-            await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+            # Coordinator listener in sensor.py handles the new entity automatically
 
         hass.services.async_register(
             DOMAIN, SERVICE_ADD_STOCK, handle_add_stock, schema=ADD_STOCK_SCHEMA
