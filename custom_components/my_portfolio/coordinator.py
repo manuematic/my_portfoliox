@@ -26,6 +26,10 @@ from .const import (
     ATTR_ALARM_UNTEN,
     ATTR_GEWINN,
     ATTR_AKTUELLER_KURS,
+    ATTR_GESAMT_INVEST,
+    ATTR_GESAMT_WERT,
+    ATTR_PORTFOLIO_DIFFERENZ,
+    ATTR_PORTFOLIO_PROZENT,
 )
 from .yahoo_finance import fetch_stock_price
 
@@ -53,6 +57,12 @@ class MyPortfolioCoordinator(DataUpdateCoordinator):
         self._store = Store(hass, STORAGE_VERSION, f"{STORAGE_KEY}.{entry_id}")
         self._stocks: dict[str, dict] = {}
         self._session: aiohttp.ClientSession | None = None
+        self.portfolio_summary: dict = {
+            ATTR_GESAMT_INVEST: None,
+            ATTR_GESAMT_WERT: None,
+            ATTR_PORTFOLIO_DIFFERENZ: None,
+            ATTR_PORTFOLIO_PROZENT: None,
+        }
 
     async def async_setup(self) -> None:
         """Gespeicherte Portfolio-Daten laden."""
@@ -113,6 +123,48 @@ class MyPortfolioCoordinator(DataUpdateCoordinator):
                 stock_data[ATTR_ALARM_UNTEN] = False
 
             updated_data[stock_id] = stock_data
+
+        # ── Portfolio-Gesamtwerte ──────────────────────────────────────────
+        # gesamtinvest = Summe (Stückzahl × Kaufpreis)         float 7,3
+        # gesamtwert   = Summe (Stückzahl × Aktueller Kurs)    float 7,3
+        gesamt_invest = 0.0
+        gesamt_wert = 0.0
+        all_prices_available = True
+
+        for stock_id, stock in self._stocks.items():
+            preis = stock.get(ATTR_PREIS) or 0.0
+            stueckzahl = stock.get(ATTR_STUECKZAHL) or 0
+            aktueller_kurs = updated_data.get(stock_id, {}).get(ATTR_AKTUELLER_KURS)
+
+            gesamt_invest += preis * stueckzahl
+
+            if aktueller_kurs is not None:
+                gesamt_wert += aktueller_kurs * stueckzahl
+            else:
+                all_prices_available = False
+
+        gesamt_invest = round(gesamt_invest, 3)
+        gesamt_wert = round(gesamt_wert, 3) if all_prices_available else None
+
+        # portfoliodifferenz = gesamtinvest - gesamtwert        float 7,3
+        if gesamt_wert is not None:
+            portfolio_differenz = round(gesamt_invest - gesamt_wert, 3)
+        else:
+            portfolio_differenz = None
+
+        # portfolioprozent = (gesamtwert - gesamtinvest) * 100 / gesamtinvest  float 4,2
+        if gesamt_wert is not None and gesamt_invest:
+            portfolio_prozent = round((gesamt_wert - gesamt_invest) * 100.0 / gesamt_invest, 2)
+        else:
+            portfolio_prozent = None
+
+        # Gesamtwerte im Coordinator-Objekt ablegen (für Portfolio-Sensoren)
+        self.portfolio_summary = {
+            ATTR_GESAMT_INVEST:      gesamt_invest,
+            ATTR_GESAMT_WERT:        gesamt_wert,
+            ATTR_PORTFOLIO_DIFFERENZ: portfolio_differenz,
+            ATTR_PORTFOLIO_PROZENT:   portfolio_prozent,
+        }
 
         return updated_data
 

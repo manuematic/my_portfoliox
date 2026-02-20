@@ -27,6 +27,10 @@ from .const import (
     ATTR_GEWINN,
     ATTR_AKTUELLER_KURS,
     ATTR_PORTFOLIO_NAME,
+    ATTR_GESAMT_INVEST,
+    ATTR_GESAMT_WERT,
+    ATTR_PORTFOLIO_DIFFERENZ,
+    ATTR_PORTFOLIO_PROZENT,
 )
 from .coordinator import MyPortfolioCoordinator
 
@@ -65,6 +69,15 @@ async def async_setup_entry(
     async_add_entities(initial_entities, update_before_add=True)
 
     entry.async_on_unload(coordinator.async_add_listener(_handle_coordinator_update))
+
+    # Portfolio-Gesamt-Sensoren (einmalig, nicht pro Aktie)
+    portfolio_sensors = [
+        PortfolioSummarySensor(coordinator, entry, ATTR_GESAMT_INVEST,      "Gesamtinvest",        "mdi:bank-outline",       "%"),
+        PortfolioSummarySensor(coordinator, entry, ATTR_GESAMT_WERT,        "Gesamtwert",          "mdi:chart-areaspline",   "%"),
+        PortfolioSummarySensor(coordinator, entry, ATTR_PORTFOLIO_DIFFERENZ,"Portfoliodifferenz",  "mdi:minus-box-outline",  "%"),
+        PortfolioSummarySensor(coordinator, entry, ATTR_PORTFOLIO_PROZENT,  "Portfolioprozent",    "mdi:percent-outline",    "%"),
+    ]
+    async_add_entities(portfolio_sensors, update_before_add=True)
 
 
 class StockSensor(CoordinatorEntity[MyPortfolioCoordinator], SensorEntity):
@@ -158,3 +171,62 @@ class StockSensor(CoordinatorEntity[MyPortfolioCoordinator], SensorEntity):
         if new_name != self._attr_name:
             self._attr_name = new_name
         super()._handle_coordinator_update()
+
+
+class PortfolioSummarySensor(CoordinatorEntity[MyPortfolioCoordinator], SensorEntity):
+    """Ein Portfolio-Gesamt-Sensor (Gesamtinvest, Gesamtwert, Differenz, Prozent)."""
+
+    _attr_has_entity_name = True
+    _attr_state_class = SensorStateClass.MEASUREMENT
+
+    # Konfiguration je Sensor-Typ
+    _UNIT_MAP = {
+        ATTR_GESAMT_INVEST:       "EUR",
+        ATTR_GESAMT_WERT:         "EUR",
+        ATTR_PORTFOLIO_DIFFERENZ: "EUR",
+        ATTR_PORTFOLIO_PROZENT:   "%",
+    }
+    _DECIMALS_MAP = {
+        ATTR_GESAMT_INVEST:       3,   # float 7,3
+        ATTR_GESAMT_WERT:         3,   # float 7,3
+        ATTR_PORTFOLIO_DIFFERENZ: 3,   # float 7,3
+        ATTR_PORTFOLIO_PROZENT:   2,   # float 4,2
+    }
+
+    def __init__(
+        self,
+        coordinator: MyPortfolioCoordinator,
+        entry: ConfigEntry,
+        attr_key: str,
+        display_name: str,
+        icon: str,
+        unit: str,
+    ) -> None:
+        super().__init__(coordinator)
+        self._attr_key = attr_key
+        self._attr_unique_id = f"{entry.entry_id}_summary_{attr_key}"
+        self._attr_name = display_name
+        self._attr_icon = icon
+        self._attr_native_unit_of_measurement = self._UNIT_MAP.get(attr_key, unit)
+        self._decimals = self._DECIMALS_MAP.get(attr_key, 2)
+
+        self._attr_device_info = DeviceInfo(
+            identifiers={(DOMAIN, entry.entry_id)},
+            name=f"{NAME} – {coordinator.portfolio_name}",
+            manufacturer="Mein Portfolio",
+            model="Yahoo Finance",
+            entry_type=DeviceEntryType.SERVICE,
+        )
+
+    @property
+    def native_value(self) -> float | None:
+        """Berechneten Gesamtwert als Sensor-State zurückgeben."""
+        val = self.coordinator.portfolio_summary.get(self._attr_key)
+        if val is None:
+            return None
+        return round(float(val), self._decimals)
+
+    @property
+    def extra_state_attributes(self) -> dict:
+        """Portfolio-Name als Attribut."""
+        return {ATTR_PORTFOLIO_NAME: self.coordinator.portfolio_name}

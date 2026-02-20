@@ -41,3 +41,9 @@ YAHOO_HEADERS = {
 
 # Platforms
 PLATFORMS = ["sensor"]
+
+# Portfolio-Gesamt-Sensoren
+ATTR_GESAMT_INVEST = "gesamtinvest"
+ATTR_GESAMT_WERT = "gesamtwert"
+ATTR_PORTFOLIO_DIFFERENZ = "portfoliodifferenz"
+ATTR_PORTFOLIO_PROZENT = "portfolioprozent"

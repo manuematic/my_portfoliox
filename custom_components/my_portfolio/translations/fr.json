@@ -1,0 +1,79 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Créer un portefeuille",
+        "description": "Donnez un nom à votre portefeuille et choisissez l'intervalle de mise à jour.",
+        "data": {
+          "portfolio_name": "Nom du portefeuille",
+          "scan_interval": "Intervalle de mise à jour"
+        }
+      }
+    },
+    "abort": {
+      "already_configured": "Un portefeuille avec ce nom existe déjà."
+    },
+    "error": {
+      "invalid_name": "Veuillez saisir un nom de portefeuille valide."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Gérer le portefeuille",
+        "description": "Actions en portefeuille :\n{overview}",
+        "data": {
+          "action": "Choisir une action"
+        }
+      },
+      "add_stock": {
+        "title": "Ajouter une action",
+        "data": {
+          "bezeichnung": "Désignation (ex. BASF SE, Apple Inc.)",
+          "kuerzel": "Symbole boursier (ex. AAPL, SAP.DE)",
+          "preis": "Prix d'achat par action",
+          "stueckzahl": "Nombre d'actions",
+          "kaufdatum": "Date d'achat",
+          "limitoben": "Limite haute (alarme si dépassée, 0 = pas de limite)",
+          "limitunten": "Limite basse (alarme si en dessous, 0 = pas de limite)"
+        }
+      },
+      "select_stock": {
+        "title": "Sélectionner une action",
+        "description": "Sélectionnez l'action que vous souhaitez modifier ou supprimer.",
+        "data": {
+          "stock_id": "Action",
+          "action": "Action"
+        }
+      },
+      "edit_stock": {
+        "title": "Modifier l'action : {kuerzel}",
+        "data": {
+          "bezeichnung": "Désignation (ex. BASF SE, Apple Inc.)",
+          "kuerzel": "Symbole boursier",
+          "preis": "Prix d'achat par action",
+          "stueckzahl": "Nombre d'actions",
+          "kaufdatum": "Date d'achat",
+          "limitoben": "Limite haute",
+          "limitunten": "Limite basse"
+        }
+      },
+      "confirm_delete": {
+        "title": "Supprimer l'action",
+        "description": "Voulez-vous vraiment supprimer \"{kuerzel}\" de votre portefeuille ?",
+        "data": {
+          "confirm": "Oui, supprimer l'action"
+        }
+      },
+      "settings": {
+        "title": "Paramètres",
+        "data": {
+          "scan_interval": "Intervalle de mise à jour (minutes)"
+        }
+      }
+    },
+    "error": {
+      "invalid_kuerzel": "Veuillez saisir un symbole boursier valide."
+    }
+  }
+}

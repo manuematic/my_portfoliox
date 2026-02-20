@@ -1,0 +1,79 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Crear cartera",
+        "description": "Asigne un nombre a su cartera y elija el intervalo de actualización.",
+        "data": {
+          "portfolio_name": "Nombre de la cartera",
+          "scan_interval": "Intervalo de actualización"
+        }
+      }
+    },
+    "abort": {
+      "already_configured": "Ya existe una cartera con este nombre."
+    },
+    "error": {
+      "invalid_name": "Por favor, introduzca un nombre de cartera válido."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Gestionar cartera",
+        "description": "Valores en cartera:\n{overview}",
+        "data": {
+          "action": "Elegir acción"
+        }
+      },
+      "add_stock": {
+        "title": "Añadir valor",
+        "data": {
+          "bezeichnung": "Nombre (p. ej. BASF SE, Apple Inc.)",
+          "kuerzel": "Símbolo bursátil (p. ej. AAPL, SAP.DE)",
+          "preis": "Precio de compra por acción",
+          "stueckzahl": "Número de acciones",
+          "kaufdatum": "Fecha de compra",
+          "limitoben": "Límite superior (alarma si se supera, 0 = sin límite)",
+          "limitunten": "Límite inferior (alarma si se baja, 0 = sin límite)"
+        }
+      },
+      "select_stock": {
+        "title": "Seleccionar valor",
+        "description": "Seleccione el valor que desea editar o eliminar.",
+        "data": {
+          "stock_id": "Valor",
+          "action": "Acción"
+        }
+      },
+      "edit_stock": {
+        "title": "Editar valor: {kuerzel}",
+        "data": {
+          "bezeichnung": "Nombre (p. ej. BASF SE, Apple Inc.)",
+          "kuerzel": "Símbolo bursátil",
+          "preis": "Precio de compra por acción",
+          "stueckzahl": "Número de acciones",
+          "kaufdatum": "Fecha de compra",
+          "limitoben": "Límite superior",
+          "limitunten": "Límite inferior"
+        }
+      },
+      "confirm_delete": {
+        "title": "Eliminar valor",
+        "description": "¿Está seguro de que desea eliminar \"{kuerzel}\" de su cartera?",
+        "data": {
+          "confirm": "Sí, eliminar valor"
+        }
+      },
+      "settings": {
+        "title": "Configuración",
+        "data": {
+          "scan_interval": "Intervalo de actualización (minutos)"
+        }
+      }
+    },
+    "error": {
+      "invalid_kuerzel": "Por favor, introduzca un símbolo bursátil válido."
+    }
+  }
+}
