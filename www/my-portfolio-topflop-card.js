@@ -1,16 +1,15 @@
 /**
- * my-portfolio-topflop-card
+ * my-portfolio-topflop-card  v0.6.1
  * Zeigt die besten 3 und schlechtesten 3 Aktien nach prozentualem Gewinn.
  *
  * Installation:
  *   1. Datei nach /config/www/my-portfolio-topflop-card.js kopieren
  *   2. Einstellungen → Dashboards → ⋮ → Ressourcen → + Hinzufügen
  *      URL: /local/my-portfolio-topflop-card.js  Typ: JavaScript-Modul
- *   3. Dashboard-Karte hinzufügen (Typ: Manuell / YAML):
- *
+ *   3. Dashboard-Karte (YAML):
  *      type: custom:my-portfolio-topflop-card
- *      title: Top & Flop Aktien        # optional
- *      max_items: 3                    # optional, Standard: 3
+ *      title: Top & Flop Aktien   # optional
+ *      max_items: 3               # optional, Standard: 3
  */
 
 class MyPortfolioTopFlopCard extends HTMLElement {
@@ -19,9 +18,7 @@ class MyPortfolioTopFlopCard extends HTMLElement {
     this.attachShadow({ mode: "open" });
   }
 
-  setConfig(config) {
-    this._config = config;
-  }
+  setConfig(config) { this._config = config; }
 
   set hass(hass) {
     this._hass = hass;
@@ -29,24 +26,20 @@ class MyPortfolioTopFlopCard extends HTMLElement {
   }
 
   _getStocks() {
-    const hass = this._hass;
     const stocks = [];
-
-    for (const [entityId, state] of Object.entries(hass.states)) {
+    for (const [entityId, state] of Object.entries(this._hass.states)) {
       if (!entityId.startsWith("sensor.")) continue;
       const attr = state.attributes;
-      // Aktien-Entitäten haben kuerzel und gewinn
-      if (attr.kuerzel === undefined || attr.gewinn === undefined) continue;
-      if (attr.gesamtinvest !== undefined) continue; // Portfolio-Summary überspringen
+      // Aktien-Sensoren: kuerzel vorhanden, kein summary_key
+      if (attr.kuerzel === undefined || attr.summary_key !== undefined) continue;
       const gewinn = parseFloat(attr.gewinn);
       if (isNaN(gewinn)) continue;
       stocks.push({
-        entityId,
-        bezeichnung: attr.bezeichnung || attr.kuerzel || entityId,
-        kuerzel: attr.kuerzel,
+        bezeichnung: (attr.bezeichnung || attr.kuerzel || entityId).trim(),
+        kuerzel:     attr.kuerzel || "?",
         gewinn,
-        kurs: parseFloat(state.state) || null,
-        portfolio: attr.portfolio_name || "",
+        kurs:        parseFloat(state.state) || null,
+        portfolio:   attr.portfolio_name || "",
       });
     }
     return stocks;
@@ -54,51 +47,47 @@ class MyPortfolioTopFlopCard extends HTMLElement {
 
   _render() {
     if (!this._hass) return;
-    const config = this._config || {};
-    const title = config.title || "Top & Flop Aktien";
+    const config   = this._config || {};
+    const title    = config.title || "Top & Flop Aktien";
     const maxItems = parseInt(config.max_items) || 3;
 
     const stocks = this._getStocks();
-    if (stocks.length === 0) {
-      this.shadowRoot.innerHTML = `
-        <style>
-          :host { display: block; }
-          .empty { padding: 1.5rem; text-align: center; color: var(--secondary-text-color); font-family: var(--primary-font-family); }
-        </style>
-        <ha-card><div class="empty">Keine Aktien-Sensoren gefunden.</div></ha-card>`;
-      return;
-    }
 
-    const sorted = [...stocks].sort((a, b) => b.gewinn - a.gewinn);
-    const top = sorted.slice(0, maxItems);
-    const flop = [...sorted].reverse().slice(0, maxItems);
-
-    const fmt = (v, decimals = 2) =>
-      v !== null && v !== undefined
-        ? v.toLocaleString("de-DE", { minimumFractionDigits: decimals, maximumFractionDigits: decimals })
+    const fmt = (v, dec = 2) =>
+      v !== null && v !== undefined && !isNaN(v)
+        ? v.toLocaleString("de-DE", { minimumFractionDigits: dec, maximumFractionDigits: dec })
         : "–";
+    const sign  = v => v >= 0 ? "+" : "";
+    const color = v => v >= 0 ? "#22c55e" : "#ef4444";
 
-    const renderRow = (s, rank, isTop) => {
-      const sign = s.gewinn >= 0 ? "+" : "";
-      const color = s.gewinn >= 0 ? "#22c55e" : "#ef4444";
-      const bar = Math.min(Math.abs(s.gewinn), 30); // max 30% für Balkenbreite
-      const barDir = isTop ? "left" : "right";
+    const renderRow = (s, medal, isTop, delay) => {
+      const bar = Math.min(Math.abs(s.gewinn), 40) * 2.5; // px, max 100px
       return `
-        <div class="row">
-          <div class="rank" style="color:${color}">${rank}</div>
+        <div class="row" style="animation-delay:${delay}s">
+          <div class="medal">${medal}</div>
           <div class="info">
             <div class="name">${s.bezeichnung}</div>
-            <div class="meta">${s.kuerzel} · ${s.portfolio}</div>
-            <div class="bar-wrap">
-              <div class="bar" style="width:${bar * 3}px; background:${color}; margin-${barDir}:auto"></div>
+            <div class="meta">${s.kuerzel}${s.portfolio ? " · " + s.portfolio : ""}</div>
+            <div class="bar-track">
+              <div class="bar-fill" style="
+                width:${bar}px;
+                background:${color(s.gewinn)};
+                ${!isTop ? "margin-left:auto;" : ""}
+              "></div>
             </div>
           </div>
-          <div class="value" style="color:${color}">
-            <span class="pct">${sign}${fmt(s.gewinn)}%</span>
+          <div class="values">
+            <span class="pct" style="color:${color(s.gewinn)}">${sign(s.gewinn)}${fmt(s.gewinn)}%</span>
             <span class="kurs">${fmt(s.kurs, 3)}</span>
           </div>
         </div>`;
     };
+
+    const sorted   = [...stocks].sort((a, b) => b.gewinn - a.gewinn);
+    const top      = sorted.slice(0, maxItems);
+    const flop     = [...sorted].reverse().slice(0, maxItems);
+    const topMedals  = ["🥇","🥈","🥉","④","⑤","⑥"];
+    const flopMedals = ["💀","📉","⚠️","④","⑤","⑥"];
 
     this.shadowRoot.innerHTML = `
       <style>
@@ -111,24 +100,24 @@ class MyPortfolioTopFlopCard extends HTMLElement {
           font-family: 'Outfit', sans-serif;
         }
         .header {
-          padding: 1.1rem 1.4rem 0.5rem;
-          font-size: 0.7rem;
+          padding: 1.4rem 1.6rem 0.6rem;
+          font-size: 1.05rem;
           font-weight: 700;
-          letter-spacing: 0.18em;
+          letter-spacing: 0.12em;
           text-transform: uppercase;
           color: var(--secondary-text-color);
         }
         .section-label {
-          padding: 0.5rem 1.4rem 0.2rem;
-          font-size: 0.62rem;
+          padding: 0.5rem 1.6rem 0.3rem;
+          font-size: 0.85rem;
           font-weight: 700;
-          letter-spacing: 0.2em;
+          letter-spacing: 0.15em;
           text-transform: uppercase;
           display: flex;
           align-items: center;
-          gap: 0.5rem;
+          gap: 0.6rem;
         }
-        .section-label.top { color: #22c55e; }
+        .section-label.top  { color: #22c55e; }
         .section-label.flop { color: #ef4444; }
         .section-label::after {
           content: '';
@@ -140,24 +129,25 @@ class MyPortfolioTopFlopCard extends HTMLElement {
         .row {
           display: flex;
           align-items: center;
-          gap: 0.8rem;
-          padding: 0.55rem 1.4rem;
+          gap: 0.9rem;
+          padding: 0.7rem 1.6rem;
           transition: background 0.15s;
-          animation: fadeIn 0.3s ease both;
+          animation: fadeIn 0.35s ease both;
         }
         .row:hover { background: rgba(255,255,255,0.04); }
-        @keyframes fadeIn { from { opacity:0; transform:translateY(4px); } to { opacity:1; transform:translateY(0); } }
-        .rank {
-          font-family: 'DM Mono', monospace;
-          font-size: 1.1rem;
-          font-weight: 500;
-          width: 1.6rem;
+        @keyframes fadeIn {
+          from { opacity:0; transform:translateY(5px); }
+          to   { opacity:1; transform:translateY(0); }
+        }
+        .medal {
+          font-size: 1.7rem;
+          width: 2.2rem;
           text-align: center;
           flex-shrink: 0;
         }
         .info { flex: 1; min-width: 0; }
         .name {
-          font-size: 0.9rem;
+          font-size: 1.1rem;
           font-weight: 600;
           color: var(--primary-text-color);
           white-space: nowrap;
@@ -165,67 +155,78 @@ class MyPortfolioTopFlopCard extends HTMLElement {
           text-overflow: ellipsis;
         }
         .meta {
-          font-size: 0.7rem;
+          font-size: 0.82rem;
           color: var(--secondary-text-color);
-          margin-top: 0.1rem;
           font-family: 'DM Mono', monospace;
+          margin-top: 0.1rem;
         }
-        .bar-wrap { margin-top: 0.3rem; height: 3px; background: rgba(255,255,255,0.07); border-radius: 2px; overflow: hidden; }
-        .bar { height: 3px; border-radius: 2px; transition: width 0.6s cubic-bezier(.4,0,.2,1); }
-        .value {
-          text-align: right;
-          flex-shrink: 0;
+        .bar-track {
+          margin-top: 0.4rem;
+          height: 4px;
+          background: rgba(255,255,255,0.07);
+          border-radius: 2px;
+          overflow: hidden;
+          display: flex;
         }
+        .bar-fill {
+          height: 4px;
+          border-radius: 2px;
+          transition: width 0.7s cubic-bezier(.4,0,.2,1);
+          min-width: 2px;
+        }
+        .values { text-align: right; flex-shrink: 0; }
         .pct {
           display: block;
           font-family: 'DM Mono', monospace;
-          font-size: 0.95rem;
+          font-size: 1.2rem;
           font-weight: 500;
         }
         .kurs {
           display: block;
-          font-size: 0.7rem;
+          font-size: 0.82rem;
           color: var(--secondary-text-color);
           font-family: 'DM Mono', monospace;
-          margin-top: 0.1rem;
+          margin-top: 0.15rem;
         }
         .divider {
           height: 1px;
-          margin: 0.4rem 1.4rem;
-          background: rgba(255,255,255,0.06);
+          margin: 0.5rem 1.6rem;
+          background: rgba(255,255,255,0.07);
         }
         .footer {
-          padding: 0.5rem 1.4rem 0.9rem;
-          font-size: 0.62rem;
+          padding: 0.5rem 1.6rem 1rem;
+          font-size: 0.82rem;
           color: var(--secondary-text-color);
           font-family: 'DM Mono', monospace;
           text-align: right;
         }
+        .empty {
+          padding: 2.5rem;
+          text-align: center;
+          font-size: 1.05rem;
+          color: var(--secondary-text-color);
+        }
       </style>
       <ha-card>
         <div class="header">${title}</div>
+        ${stocks.length === 0
+          ? `<div class="empty">Keine Aktien-Sensoren gefunden.</div>`
+          : `
+            <div class="section-label top">▲ Top ${Math.min(maxItems, top.length)}</div>
+            ${top.map((s, i) => renderRow(s, topMedals[i] || i+1, true, i * 0.07)).join("")}
 
-        <div class="section-label top">▲ Top ${maxItems}</div>
-        ${top.map((s, i) => renderRow(s, ["🥇","🥈","🥉"][i] || i+1, true)).join("")}
+            <div class="divider"></div>
 
-        <div class="divider"></div>
+            <div class="section-label flop">▼ Flop ${Math.min(maxItems, flop.length)}</div>
+            ${flop.map((s, i) => renderRow(s, flopMedals[i] || i+1, false, i * 0.07)).join("")}
 
-        <div class="section-label flop">▼ Flop ${maxItems}</div>
-        ${flop.map((s, i) => renderRow(s, ["💀","📉","⚠️"][i] || i+1, false)).join("")}
-
-        <div class="footer">Gewinn in % seit Kauf · ${stocks.length} Aktien gesamt</div>
+            <div class="footer">Gewinn % seit Kauf · ${stocks.length} Aktien gesamt</div>
+          `}
       </ha-card>`;
   }
 
   getCardSize() { return 5; }
-
-  static getConfigElement() {
-    return document.createElement("my-portfolio-topflop-card-editor");
-  }
-
-  static getStubConfig() {
-    return { title: "Top & Flop Aktien", max_items: 3 };
-  }
+  static getStubConfig() { return { title: "Top & Flop Aktien", max_items: 3 }; }
 }
 
 customElements.define("my-portfolio-topflop-card", MyPortfolioTopFlopCard);
@@ -234,5 +235,4 @@ window.customCards.push({
   type: "my-portfolio-topflop-card",
   name: "Portfolio Top & Flop",
   description: "Zeigt die besten und schlechtesten Aktien nach prozentualem Gewinn.",
-  preview: false,
 });
