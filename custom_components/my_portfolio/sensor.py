@@ -19,8 +19,6 @@ from .const import (
     ATTR_WKN,
     ATTR_ISIN,
     ATTR_KUERZEL,
-    ATTR_WKN,
-    ATTR_ISIN,
     ATTR_PREIS,
     ATTR_STUECKZAHL,
     ATTR_KAUFDATUM,
@@ -31,7 +29,6 @@ from .const import (
     ATTR_GEWINN,
     ATTR_AKTUELLER_KURS,
     ATTR_PORTFOLIO_NAME,
-    ATTR_KURSQUELLE_URL,
     ATTR_GESAMT_INVEST,
     ATTR_GESAMT_WERT,
     ATTR_PORTFOLIO_DIFFERENZ,
@@ -128,14 +125,11 @@ class StockSensor(CoordinatorEntity[MyPortfolioCoordinator], SensorEntity):
             ATTR_WKN:             base.get(ATTR_WKN, ""),
             ATTR_ISIN:            base.get(ATTR_ISIN, ""),
             ATTR_KUERZEL:         base.get(ATTR_KUERZEL),
-            ATTR_WKN:             base.get(ATTR_WKN, ""),
-            ATTR_ISIN:            base.get(ATTR_ISIN, ""),
             ATTR_PREIS:           base.get(ATTR_PREIS),
             ATTR_STUECKZAHL:      base.get(ATTR_STUECKZAHL),
             ATTR_KAUFDATUM:       base.get(ATTR_KAUFDATUM),
             ATTR_LIMIT_OBEN:      base.get(ATTR_LIMIT_OBEN),
             ATTR_LIMIT_UNTEN:     base.get(ATTR_LIMIT_UNTEN),
-            ATTR_KURSQUELLE_URL:  base.get(ATTR_KURSQUELLE_URL, ""),
             ATTR_AKTUELLER_KURS:  data.get(ATTR_AKTUELLER_KURS),
             ATTR_ALARM_OBEN:      data.get(ATTR_ALARM_OBEN, False),
             ATTR_ALARM_UNTEN:     data.get(ATTR_ALARM_UNTEN, False),
@@ -196,4 +190,7 @@ class PortfolioSummarySensor(CoordinatorEntity[MyPortfolioCoordinator], SensorEn
 
     @property
     def extra_state_attributes(self) -> dict:
-        return {ATTR_PORTFOLIO_NAME: self.coordinator.portfolio_name}
+        return {
+            ATTR_PORTFOLIO_NAME: self.coordinator.portfolio_name,
+            "summary_key": self._attr_key,   # z.B. "gesamtinvest" – für Dashboard-Cards
+        }
