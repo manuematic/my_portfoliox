@@ -3,9 +3,10 @@
     "step": {
       "user": {
         "title": "Portfolio erstellen",
-        "description": "Gib deinem Portfolio einen Namen und wähle das Aktualisierungsintervall.",
+        "description": "Gib deinem Portfolio einen Namen, wähle die Kursquelle und das Aktualisierungsintervall.",
         "data": {
           "portfolio_name": "Portfolio-Name",
+          "data_source": "Kursquelle",
           "scan_interval": "Aktualisierungsintervall"
         }
       }
@@ -30,32 +31,38 @@
         "title": "Neue Aktie hinzufügen",
         "data": {
           "bezeichnung": "Bezeichnung (z.B. BASF SE, Apple Inc.)",
-          "kuerzel": "Börsenkürzel (z.B. AAPL, SAP.DE)",
+          "wkn": "WKN (optional)",
+          "isin": "ISIN (optional)",
+          "kuerzel": "Börsenkürzel (z.B. AAPL, BAS.DE)",
           "preis": "Kaufpreis pro Stück",
           "stueckzahl": "Stückzahl",
           "kaufdatum": "Kaufdatum",
           "limitoben": "Limit Oben (Alarm bei Überschreitung, 0 = kein Limit)",
-          "limitunten": "Limit Unten (Alarm bei Unterschreitung, 0 = kein Limit)"
+          "limitunten": "Limit Unten (Alarm bei Unterschreitung, 0 = kein Limit)",
+          "kursquelle_url": "Kursseiten-URL (z.B. https://www.finanzen.net/aktien/basf-aktie)"
         }
       },
       "select_stock": {
         "title": "Aktie wählen",
+        "description": "Wähle die Aktie die du bearbeiten oder löschen möchtest.",
         "data": {
           "stock_id": "Aktie",
           "action": "Aktion"
-        },
-        "description": "Wähle die Aktie die du bearbeiten oder löschen möchtest."
+        }
       },
       "edit_stock": {
         "title": "Aktie bearbeiten: {kuerzel}",
         "data": {
-          "bezeichnung": "Bezeichnung (z.B. BASF SE, Apple Inc.)",
+          "bezeichnung": "Bezeichnung",
+          "wkn": "WKN",
+          "isin": "ISIN",
           "kuerzel": "Börsenkürzel",
           "preis": "Kaufpreis pro Stück",
           "stueckzahl": "Stückzahl",
           "kaufdatum": "Kaufdatum",
           "limitoben": "Limit Oben",
-          "limitunten": "Limit Unten"
+          "limitunten": "Limit Unten",
+          "kursquelle_url": "Kursseiten-URL"
         }
       },
       "confirm_delete": {
@@ -68,6 +75,7 @@
       "settings": {
         "title": "Einstellungen",
         "data": {
+          "data_source": "Kursquelle",
           "scan_interval": "Aktualisierungsintervall (Minuten)"
         }
       }

@@ -3,9 +3,10 @@
     "step": {
       "user": {
         "title": "Crear cartera",
-        "description": "Asigne un nombre a su cartera y elija el intervalo de actualización.",
+        "description": "Asigne un nombre a su cartera, elija la fuente de precios y el intervalo de actualización.",
         "data": {
           "portfolio_name": "Nombre de la cartera",
+          "data_source": "Fuente de precios",
           "scan_interval": "Intervalo de actualización"
         }
       }
@@ -30,12 +31,15 @@
         "title": "Añadir valor",
         "data": {
           "bezeichnung": "Nombre (p. ej. BASF SE, Apple Inc.)",
-          "kuerzel": "Símbolo bursátil (p. ej. AAPL, SAP.DE)",
+          "wkn": "WKN (opcional)",
+          "isin": "ISIN (opcional)",
+          "kuerzel": "Símbolo bursátil (p. ej. AAPL, BAS.DE)",
           "preis": "Precio de compra por acción",
           "stueckzahl": "Número de acciones",
           "kaufdatum": "Fecha de compra",
           "limitoben": "Límite superior (alarma si se supera, 0 = sin límite)",
-          "limitunten": "Límite inferior (alarma si se baja, 0 = sin límite)"
+          "limitunten": "Límite inferior (alarma si se baja, 0 = sin límite)",
+          "kursquelle_url": "URL de la página de precios (p. ej. https://www.finanzen.net/aktien/basf-aktie)"
         }
       },
       "select_stock": {
@@ -49,13 +53,16 @@
       "edit_stock": {
         "title": "Editar valor: {kuerzel}",
         "data": {
-          "bezeichnung": "Nombre (p. ej. BASF SE, Apple Inc.)",
+          "bezeichnung": "Nombre",
+          "wkn": "WKN",
+          "isin": "ISIN",
           "kuerzel": "Símbolo bursátil",
           "preis": "Precio de compra por acción",
           "stueckzahl": "Número de acciones",
           "kaufdatum": "Fecha de compra",
           "limitoben": "Límite superior",
-          "limitunten": "Límite inferior"
+          "limitunten": "Límite inferior",
+          "kursquelle_url": "URL de la página de precios"
         }
       },
       "confirm_delete": {
@@ -68,6 +75,7 @@
       "settings": {
         "title": "Configuración",
         "data": {
+          "data_source": "Fuente de precios",
           "scan_interval": "Intervalo de actualización (minutos)"
         }
       }

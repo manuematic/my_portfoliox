@@ -1,4 +1,4 @@
-"""DataUpdateCoordinator for Mein Portfolio."""
+"""DataUpdateCoordinator für Mein Portfolio."""
 from __future__ import annotations
 
 import logging
@@ -15,8 +15,15 @@ from .const import (
     STORAGE_KEY,
     STORAGE_VERSION,
     DEFAULT_SCAN_INTERVAL,
+    DEFAULT_SOURCE,
+    SOURCE_YAHOO,
+    SOURCE_FINANZEN_NET,
+    SOURCE_FINANZEN100,
+    CONF_DATA_SOURCE,
     ATTR_BEZEICHNUNG,
     ATTR_KUERZEL,
+    ATTR_WKN,
+    ATTR_ISIN,
     ATTR_PREIS,
     ATTR_STUECKZAHL,
     ATTR_KAUFDATUM,
@@ -26,12 +33,14 @@ from .const import (
     ATTR_ALARM_UNTEN,
     ATTR_GEWINN,
     ATTR_AKTUELLER_KURS,
+    ATTR_KURSQUELLE_URL,
     ATTR_GESAMT_INVEST,
     ATTR_GESAMT_WERT,
     ATTR_PORTFOLIO_DIFFERENZ,
     ATTR_PORTFOLIO_PROZENT,
 )
-from .yahoo_finance import fetch_stock_price
+from .yahoo_finance import fetch_price_yahoo
+from .scraper import fetch_price_finanzen_net, fetch_price_finanzen100
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -45,6 +54,7 @@ class MyPortfolioCoordinator(DataUpdateCoordinator):
         portfolio_name: str,
         entry_id: str,
         scan_interval: int = DEFAULT_SCAN_INTERVAL,
+        data_source: str = DEFAULT_SOURCE,
     ) -> None:
         super().__init__(
             hass,
@@ -54,6 +64,7 @@ class MyPortfolioCoordinator(DataUpdateCoordinator):
         )
         self.portfolio_name = portfolio_name
         self.entry_id = entry_id
+        self.data_source = data_source
         self._store = Store(hass, STORAGE_VERSION, f"{STORAGE_KEY}.{entry_id}")
         self._stocks: dict[str, dict] = {}
         self._session: aiohttp.ClientSession | None = None
@@ -70,8 +81,33 @@ class MyPortfolioCoordinator(DataUpdateCoordinator):
         if stored and "stocks" in stored:
             self._stocks = stored["stocks"]
         _LOGGER.debug(
-            "Portfolio '%s' geladen – %d Aktien", self.portfolio_name, len(self._stocks)
+            "Portfolio '%s' geladen – %d Aktien, Quelle: %s",
+            self.portfolio_name, len(self._stocks), self.data_source,
         )
+
+    async def _fetch_price(self, stock: dict) -> float | None:
+        """Kurs für eine Aktie abhängig von der konfigurierten Quelle abrufen."""
+        source = self.data_source
+
+        if source == SOURCE_YAHOO:
+            return await fetch_price_yahoo(self._session, stock.get(ATTR_KUERZEL, ""))
+
+        # finanzen.net und finanzen100: URL aus Aktien-Stammdaten lesen
+        url = stock.get(ATTR_KURSQUELLE_URL, "").strip()
+        if not url:
+            _LOGGER.warning(
+                "Keine Kursquelle-URL für Aktie '%s' – bitte URL in der Aktie hinterlegen",
+                stock.get(ATTR_KUERZEL, "?"),
+            )
+            return None
+
+        if source == SOURCE_FINANZEN_NET:
+            return await fetch_price_finanzen_net(self._session, url)
+        if source == SOURCE_FINANZEN100:
+            return await fetch_price_finanzen100(self._session, url)
+
+        _LOGGER.error("Unbekannte Datenquelle: %s", source)
+        return None
 
     async def _async_update_data(self) -> dict[str, dict]:
         """Aktuelle Kurse für alle Aktien abrufen und Felder berechnen."""
@@ -84,8 +120,7 @@ class MyPortfolioCoordinator(DataUpdateCoordinator):
         updated_data: dict[str, dict] = {}
 
         for stock_id, stock in self._stocks.items():
-            kuerzel = stock.get(ATTR_KUERZEL, "")
-            aktueller_kurs = await fetch_stock_price(self._session, kuerzel)
+            aktueller_kurs = await self._fetch_price(stock)
 
             # Letzten bekannten Kurs behalten wenn Abruf fehlschlägt
             if aktueller_kurs is None:
@@ -97,8 +132,7 @@ class MyPortfolioCoordinator(DataUpdateCoordinator):
             preis = stock.get(ATTR_PREIS) or 0.0
 
             # ── Gewinn: prozentualer Kursgewinn seit Kauf ──────────────────
-            # Formel: ((Aktueller Kurs - Kaufpreis) * 100 / Kaufpreis)
-            # Format: float 3,2 (max. 3 Vor-, 2 Nachkommastellen)
+            # Formel: ((Aktueller Kurs - Kaufpreis) * 100 / Kaufpreis)  float 3,2
             if aktueller_kurs is not None and preis:
                 gewinn_pct = (aktueller_kurs - preis) * 100.0 / preis
                 stock_data[ATTR_GEWINN] = round(gewinn_pct, 2)
@@ -106,15 +140,13 @@ class MyPortfolioCoordinator(DataUpdateCoordinator):
                 stock_data[ATTR_GEWINN] = None
 
             # ── Kurs-Alarme ────────────────────────────────────────────────
-            limit_oben = stock.get(ATTR_LIMIT_OBEN)   # None oder 0 = kein Limit
+            limit_oben = stock.get(ATTR_LIMIT_OBEN)
             limit_unten = stock.get(ATTR_LIMIT_UNTEN)
 
             if aktueller_kurs is not None:
-                # Alarm oben:  Kurs > Limit oben  (Limit muss gesetzt und > 0 sein)
                 stock_data[ATTR_ALARM_OBEN] = bool(
                     limit_oben and limit_oben > 0 and aktueller_kurs > limit_oben
                 )
-                # Alarm unten: Kurs < Limit unten (Limit muss gesetzt und > 0 sein)
                 stock_data[ATTR_ALARM_UNTEN] = bool(
                     limit_unten and limit_unten > 0 and aktueller_kurs < limit_unten
                 )
@@ -125,8 +157,6 @@ class MyPortfolioCoordinator(DataUpdateCoordinator):
             updated_data[stock_id] = stock_data
 
         # ── Portfolio-Gesamtwerte ──────────────────────────────────────────
-        # gesamtinvest = Summe (Stückzahl × Kaufpreis)         float 7,3
-        # gesamtwert   = Summe (Stückzahl × Aktueller Kurs)    float 7,3
         gesamt_invest = 0.0
         gesamt_wert = 0.0
         all_prices_available = True
@@ -146,38 +176,33 @@ class MyPortfolioCoordinator(DataUpdateCoordinator):
         gesamt_invest = round(gesamt_invest, 3)
         gesamt_wert = round(gesamt_wert, 3) if all_prices_available else None
 
-        # portfoliodifferenz = gesamtinvest - gesamtwert        float 7,3
-        if gesamt_wert is not None:
-            portfolio_differenz = round(gesamt_invest - gesamt_wert, 3)
-        else:
-            portfolio_differenz = None
+        # portfoliodifferenz = gesamtwert - gesamtinvest    float 7,3
+        portfolio_differenz = (
+            round(gesamt_wert - gesamt_invest, 3)
+            if gesamt_wert is not None else None
+        )
 
         # portfolioprozent = (gesamtwert - gesamtinvest) * 100 / gesamtinvest  float 4,2
-        if gesamt_wert is not None and gesamt_invest:
-            portfolio_prozent = round((gesamt_wert - gesamt_invest) * 100.0 / gesamt_invest, 2)
-        else:
-            portfolio_prozent = None
+        portfolio_prozent = (
+            round((gesamt_wert - gesamt_invest) * 100.0 / gesamt_invest, 2)
+            if gesamt_wert is not None and gesamt_invest else None
+        )
 
-        # Gesamtwerte im Coordinator-Objekt ablegen (für Portfolio-Sensoren)
         self.portfolio_summary = {
-            ATTR_GESAMT_INVEST:      gesamt_invest,
-            ATTR_GESAMT_WERT:        gesamt_wert,
+            ATTR_GESAMT_INVEST:       gesamt_invest,
+            ATTR_GESAMT_WERT:         gesamt_wert,
             ATTR_PORTFOLIO_DIFFERENZ: portfolio_differenz,
             ATTR_PORTFOLIO_PROZENT:   portfolio_prozent,
         }
 
         return updated_data
 
-    # ------------------------------------------------------------------ #
-    #  Portfolio-Verwaltung                                                #
-    # ------------------------------------------------------------------ #
+    # ── Portfolio-Verwaltung ───────────────────────────────────────────────
 
     def get_stocks(self) -> dict[str, dict]:
-        """Alle gespeicherten Aktien zurückgeben."""
         return self._stocks
 
     async def async_add_stock(self, stock_data: dict) -> str:
-        """Neue Aktie hinzufügen und persistieren."""
         stock_id = str(uuid.uuid4())
         self._stocks[stock_id] = stock_data
         await self._async_save()
@@ -185,7 +210,6 @@ class MyPortfolioCoordinator(DataUpdateCoordinator):
         return stock_id
 
     async def async_update_stock(self, stock_id: str, stock_data: dict) -> None:
-        """Bestehende Aktie aktualisieren."""
         if stock_id not in self._stocks:
             raise ValueError(f"Aktie {stock_id} nicht gefunden")
         self._stocks[stock_id].update(stock_data)
@@ -193,15 +217,12 @@ class MyPortfolioCoordinator(DataUpdateCoordinator):
         await self.async_request_refresh()
 
     async def async_remove_stock(self, stock_id: str) -> None:
-        """Aktie aus Portfolio entfernen."""
         self._stocks.pop(stock_id, None)
         await self._async_save()
 
     async def _async_save(self) -> None:
-        """Portfolio in HA-Storage speichern."""
         await self._store.async_save({"stocks": self._stocks})
 
     async def async_shutdown(self) -> None:
-        """HTTP-Session beim Entladen schließen."""
         if self._session and not self._session.closed:
             await self._session.close()

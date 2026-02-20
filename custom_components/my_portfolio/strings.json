@@ -3,9 +3,10 @@
     "step": {
       "user": {
         "title": "Create Portfolio",
-        "description": "Give your portfolio a name and choose the update interval.",
+        "description": "Give your portfolio a name, choose a data source and update interval.",
         "data": {
           "portfolio_name": "Portfolio Name",
+          "data_source": "Price Source",
           "scan_interval": "Update Interval"
         }
       }
@@ -30,12 +31,15 @@
         "title": "Add New Stock",
         "data": {
           "bezeichnung": "Name (e.g. BASF SE, Apple Inc.)",
-          "kuerzel": "Ticker Symbol (e.g. AAPL, SAP.DE)",
+          "wkn": "WKN (optional)",
+          "isin": "ISIN (optional)",
+          "kuerzel": "Ticker Symbol (e.g. AAPL, BAS.DE)",
           "preis": "Purchase Price per Share",
           "stueckzahl": "Number of Shares",
           "kaufdatum": "Purchase Date",
           "limitoben": "Upper Limit (alarm when exceeded, 0 = no limit)",
-          "limitunten": "Lower Limit (alarm when undercut, 0 = no limit)"
+          "limitunten": "Lower Limit (alarm when undercut, 0 = no limit)",
+          "kursquelle_url": "Price Page URL (e.g. https://www.finanzen.net/aktien/basf-aktie)"
         }
       },
       "select_stock": {
@@ -49,13 +53,16 @@
       "edit_stock": {
         "title": "Edit Stock: {kuerzel}",
         "data": {
-          "bezeichnung": "Name (e.g. BASF SE, Apple Inc.)",
+          "bezeichnung": "Name",
+          "wkn": "WKN",
+          "isin": "ISIN",
           "kuerzel": "Ticker Symbol",
           "preis": "Purchase Price per Share",
           "stueckzahl": "Number of Shares",
           "kaufdatum": "Purchase Date",
           "limitoben": "Upper Limit",
-          "limitunten": "Lower Limit"
+          "limitunten": "Lower Limit",
+          "kursquelle_url": "Price Page URL"
         }
       },
       "confirm_delete": {
@@ -68,6 +75,7 @@
       "settings": {
         "title": "Settings",
         "data": {
+          "data_source": "Price Source",
           "scan_interval": "Update Interval (minutes)"
         }
       }
