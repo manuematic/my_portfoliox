@@ -1,7 +1,7 @@
 # 📈 Mein Portfolio – Home Assistant Integration
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/hacs/integration)
-[![GitHub release](https://img.shields.io/github/release/YOUR_USERNAME/my_portfolio.svg)](https://github.com/YOUR_USERNAME/my_portfolio/releases)
+[![GitHub release](https://img.shields.io/github/release/manuematic/my_portfolio.svg)](https://github.com/manuematic/my_portfolio/releases)
 
 Eine Home Assistant Integration zum Verwalten und Überwachen von Aktienportfolios mit Live-Kursen von Yahoo Finance.
 
@@ -22,7 +22,7 @@ Eine Home Assistant Integration zum Verwalten und Überwachen von Aktienportfoli
 
 1. HACS in Home Assistant öffnen
 2. **Integrationen** → **⋮** → **Benutzerdefinierte Repositories**
-3. URL eingeben: `https://github.com/YOUR_USERNAME/my_portfolio`
+3. URL eingeben: `https://github.com/manuematic/my_portfolio`
 4. Kategorie: **Integration** → **Hinzufügen**
 5. Integration suchen: **Mein Portfolio** → **Installieren**
 6. Home Assistant **neu starten**

@@ -1,70 +1,144 @@
-"""Yahoo Finance data fetcher for Mein Portfolio."""
+"""Yahoo Finance Kursabruf für Mein Portfolio.
+
+Verwendet die inoffizielle JSON-API von Yahoo Finance (query1/query2),
+die auch von der bekannten yfinance-Bibliothek genutzt wird.
+Kein HTML-Scraping, kein Parsing von JavaScript – direktes JSON.
+
+API-Endpunkt:
+  https://query1.finance.yahoo.com/v8/finance/chart/{symbol}?interval=1d&range=1d
+  Antwort: chart.result[0].meta.regularMarketPrice
+"""
 from __future__ import annotations
 
 import logging
-import re
-import json
+import asyncio
 
 import aiohttp
 
-from .const import YAHOO_BASE_URL, YAHOO_HEADERS
-
 _LOGGER = logging.getLogger(__name__)
 
+# Beide Hosts abwechselnd nutzen – Yahoo load-balanced darüber
+_API_HOSTS = [
+    "query1.finance.yahoo.com",
+    "query2.finance.yahoo.com",
+]
 
-async def fetch_stock_price(session: aiohttp.ClientSession, kuerzel: str) -> float | None:
-    """Fetch current stock price from Yahoo Finance."""
-    url = YAHOO_BASE_URL.format(kuerzel)
-    try:
-        async with session.get(url, headers=YAHOO_HEADERS, timeout=aiohttp.ClientTimeout(total=15)) as response:
-            if response.status != 200:
-                _LOGGER.warning("Yahoo Finance returned status %s for %s", response.status, kuerzel)
-                return None
+_HEADERS = {
+    "User-Agent": (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) "
+        "Chrome/120.0.0.0 Safari/537.36"
+    ),
+    "Accept": "application/json,text/plain,*/*",
+    "Accept-Language": "de-DE,de;q=0.9,en-US;q=0.8",
+    "Referer": "https://finance.yahoo.com/",
+    "Origin": "https://finance.yahoo.com",
+}
 
-            html = await response.text()
 
-            # Method 1: Try to extract from JSON embedded in page (most reliable)
-            # Yahoo embeds stock data in a script tag as JSON
-            pattern = r'"regularMarketPrice":\{"raw":([\d.]+)'
-            match = re.search(pattern, html)
-            if match:
-                price = float(match.group(1))
-                _LOGGER.debug("Fetched price for %s: %s (method: JSON)", kuerzel, price)
-                return price
+async def fetch_stock_price(
+    session: aiohttp.ClientSession,
+    kuerzel: str,
+    *,
+    _host_index: int = 0,
+) -> float | None:
+    """Aktuellen Kurs von Yahoo Finance JSON-API abrufen.
 
-            # Method 2: Try meta tag / data attribute
-            pattern2 = r'data-symbol="' + re.escape(kuerzel) + r'"[^>]*data-last="([\d.]+)"'
-            match2 = re.search(pattern2, html)
-            if match2:
-                price = float(match2.group(1))
-                _LOGGER.debug("Fetched price for %s: %s (method: data-attr)", kuerzel, price)
-                return price
+    Versucht nacheinander query1 und query2 als Host.
+    Gibt None zurück wenn kein Kurs ermittelt werden konnte.
+    """
+    symbol = kuerzel.upper()
+    last_error: Exception | None = None
 
-            # Method 3: fin-streamer tag
-            pattern3 = r'<fin-streamer[^>]*data-symbol="' + re.escape(kuerzel) + r'"[^>]*value="([\d.]+)"'
-            match3 = re.search(pattern3, html)
-            if match3:
-                price = float(match3.group(1))
-                _LOGGER.debug("Fetched price for %s: %s (method: fin-streamer)", kuerzel, price)
-                return price
+    for attempt, host in enumerate(_API_HOSTS):
+        url = (
+            f"https://{host}/v8/finance/chart/{symbol}"
+            f"?interval=1d&range=1d&includePrePost=false"
+        )
+        try:
+            async with session.get(
+                url,
+                headers=_HEADERS,
+                timeout=aiohttp.ClientTimeout(total=15),
+            ) as response:
+                if response.status == 404:
+                    _LOGGER.warning(
+                        "Symbol '%s' nicht gefunden (404) auf %s", symbol, host
+                    )
+                    return None  # Kein Retry – Symbol existiert nicht
 
-            # Method 4: Generic fin-streamer with regularMarketPrice
-            pattern4 = r'<fin-streamer[^>]*data-field="regularMarketPrice"[^>]*value="([\d.]+)"'
-            match4 = re.search(pattern4, html)
-            if match4:
-                price = float(match4.group(1))
-                _LOGGER.debug("Fetched price for %s: %s (method: fin-streamer-field)", kuerzel, price)
-                return price
+                if response.status == 429:
+                    _LOGGER.warning(
+                        "Rate-limit (429) auf %s für '%s' – versuche nächsten Host",
+                        host, symbol,
+                    )
+                    await asyncio.sleep(1)
+                    continue
 
-            _LOGGER.warning("Could not parse price for %s from Yahoo Finance", kuerzel)
+                if response.status != 200:
+                    _LOGGER.warning(
+                        "HTTP %s von %s für '%s'", response.status, host, symbol
+                    )
+                    continue
+
+                data = await response.json(content_type=None)
+
+                # JSON-Struktur: chart → result[0] → meta → regularMarketPrice
+                try:
+                    result = data["chart"]["result"]
+                    if not result:
+                        _LOGGER.warning(
+                            "Leeres Ergebnis von Yahoo für '%s'", symbol
+                        )
+                        return None
+
+                    meta = result[0]["meta"]
+
+                    # Bevorzugt: regularMarketPrice (aktueller Handelskurs)
+                    price = meta.get("regularMarketPrice")
+                    if price is not None:
+                        _LOGGER.debug(
+                            "Kurs für %s: %s (host=%s)", symbol, price, host
+                        )
+                        return float(price)
+
+                    # Fallback: letzter Schlusskurs
+                    price = meta.get("previousClose") or meta.get("chartPreviousClose")
+                    if price is not None:
+                        _LOGGER.debug(
+                            "Kurs für %s (previousClose): %s", symbol, price
+                        )
+                        return float(price)
+
+                    _LOGGER.warning(
+                        "Kein Kursfeld in Yahoo-Antwort für '%s': %s",
+                        symbol, list(meta.keys()),
+                    )
+                    return None
+
+                except (KeyError, IndexError, TypeError) as parse_err:
+                    _LOGGER.error(
+                        "Fehler beim Parsen der Yahoo-Antwort für '%s': %s",
+                        symbol, parse_err,
+                    )
+                    return None
+
+        except aiohttp.ClientResponseError as err:
+            _LOGGER.warning("HTTP-Fehler für '%s' auf %s: %s", symbol, host, err)
+            last_error = err
+        except aiohttp.ClientConnectionError as err:
+            _LOGGER.warning("Verbindungsfehler für '%s' auf %s: %s", symbol, host, err)
+            last_error = err
+        except asyncio.TimeoutError:
+            _LOGGER.warning("Timeout für '%s' auf %s", symbol, host)
+            last_error = asyncio.TimeoutError()
+        except Exception as err:  # pylint: disable=broad-except
+            _LOGGER.error("Unerwarteter Fehler für '%s': %s", symbol, err)
             return None
 
-    except aiohttp.ClientError as err:
-        _LOGGER.error("HTTP error fetching price for %s: %s", kuerzel, err)
-        return None
-    except ValueError as err:
-        _LOGGER.error("Value error parsing price for %s: %s", kuerzel, err)
-        return None
-    except Exception as err:  # pylint: disable=broad-except
-        _LOGGER.error("Unexpected error fetching price for %s: %s", kuerzel, err)
-        return None
+    _LOGGER.error(
+        "Kurs für '%s' konnte nicht abgerufen werden (beide Hosts fehlgeschlagen). "
+        "Letzter Fehler: %s",
+        symbol, last_error,
+    )
+    return None

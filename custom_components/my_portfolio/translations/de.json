@@ -29,6 +29,7 @@
       "add_stock": {
         "title": "Neue Aktie hinzufügen",
         "data": {
+          "bezeichnung": "Bezeichnung (z.B. BASF SE, Apple Inc.)",
           "kuerzel": "Börsenkürzel (z.B. AAPL, SAP.DE)",
           "preis": "Kaufpreis pro Stück",
           "stueckzahl": "Stückzahl",
@@ -42,11 +43,13 @@
         "data": {
           "stock_id": "Aktie",
           "action": "Aktion"
-        }
+        },
+        "description": "Wähle die Aktie die du bearbeiten oder löschen möchtest."
       },
       "edit_stock": {
         "title": "Aktie bearbeiten: {kuerzel}",
         "data": {
+          "bezeichnung": "Bezeichnung (z.B. BASF SE, Apple Inc.)",
           "kuerzel": "Börsenkürzel",
           "preis": "Kaufpreis pro Stück",
           "stueckzahl": "Stückzahl",

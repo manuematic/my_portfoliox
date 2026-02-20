@@ -2,11 +2,12 @@
 from __future__ import annotations
 
 import logging
+import uuid
 from datetime import timedelta
 
 import aiohttp
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from homeassistant.helpers.storage import Store
 
 from .const import (
@@ -14,6 +15,7 @@ from .const import (
     STORAGE_KEY,
     STORAGE_VERSION,
     DEFAULT_SCAN_INTERVAL,
+    ATTR_BEZEICHNUNG,
     ATTR_KUERZEL,
     ATTR_PREIS,
     ATTR_STUECKZAHL,
@@ -31,7 +33,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 class MyPortfolioCoordinator(DataUpdateCoordinator):
-    """Coordinator to fetch stock data and manage portfolio storage."""
+    """Coordinator: Kurse abrufen und Portfolio-Daten verwalten."""
 
     def __init__(
         self,
@@ -40,7 +42,6 @@ class MyPortfolioCoordinator(DataUpdateCoordinator):
         entry_id: str,
         scan_interval: int = DEFAULT_SCAN_INTERVAL,
     ) -> None:
-        """Initialize the coordinator."""
         super().__init__(
             hass,
             _LOGGER,
@@ -54,14 +55,16 @@ class MyPortfolioCoordinator(DataUpdateCoordinator):
         self._session: aiohttp.ClientSession | None = None
 
     async def async_setup(self) -> None:
-        """Load stored portfolio data."""
+        """Gespeicherte Portfolio-Daten laden."""
         stored = await self._store.async_load()
         if stored and "stocks" in stored:
             self._stocks = stored["stocks"]
-        _LOGGER.debug("Loaded portfolio '%s' with %d stocks", self.portfolio_name, len(self._stocks))
+        _LOGGER.debug(
+            "Portfolio '%s' geladen – %d Aktien", self.portfolio_name, len(self._stocks)
+        )
 
     async def _async_update_data(self) -> dict[str, dict]:
-        """Fetch latest prices for all stocks."""
+        """Aktuelle Kurse für alle Aktien abrufen und Felder berechnen."""
         if not self._stocks:
             return {}
 
@@ -74,31 +77,36 @@ class MyPortfolioCoordinator(DataUpdateCoordinator):
             kuerzel = stock.get(ATTR_KUERZEL, "")
             aktueller_kurs = await fetch_stock_price(self._session, kuerzel)
 
-            # Preserve last known price on failure
+            # Letzten bekannten Kurs behalten wenn Abruf fehlschlägt
             if aktueller_kurs is None:
                 aktueller_kurs = stock.get(ATTR_AKTUELLER_KURS)
 
             stock_data = dict(stock)
             stock_data[ATTR_AKTUELLER_KURS] = aktueller_kurs
 
-            # Calculate profit/loss
-            preis = stock.get(ATTR_PREIS, 0.0)
-            stueckzahl = stock.get(ATTR_STUECKZAHL, 0)
-            if aktueller_kurs is not None and preis and stueckzahl:
-                gewinn = (aktueller_kurs - preis) * stueckzahl
-                stock_data[ATTR_GEWINN] = round(gewinn, 3)
+            preis = stock.get(ATTR_PREIS) or 0.0
+
+            # ── Gewinn: prozentualer Kursgewinn seit Kauf ──────────────────
+            # Formel: ((Aktueller Kurs - Kaufpreis) * 100 / Kaufpreis)
+            # Format: float 3,2 (max. 3 Vor-, 2 Nachkommastellen)
+            if aktueller_kurs is not None and preis:
+                gewinn_pct = (aktueller_kurs - preis) * 100.0 / preis
+                stock_data[ATTR_GEWINN] = round(gewinn_pct, 2)
             else:
                 stock_data[ATTR_GEWINN] = None
 
-            # Evaluate alarms
-            limit_oben = stock.get(ATTR_LIMIT_OBEN)
+            # ── Kurs-Alarme ────────────────────────────────────────────────
+            limit_oben = stock.get(ATTR_LIMIT_OBEN)   # None oder 0 = kein Limit
             limit_unten = stock.get(ATTR_LIMIT_UNTEN)
+
             if aktueller_kurs is not None:
-                stock_data[ATTR_ALARM_OBEN] = (
-                    bool(limit_oben and aktueller_kurs >= limit_oben)
+                # Alarm oben:  Kurs > Limit oben  (Limit muss gesetzt und > 0 sein)
+                stock_data[ATTR_ALARM_OBEN] = bool(
+                    limit_oben and limit_oben > 0 and aktueller_kurs > limit_oben
                 )
-                stock_data[ATTR_ALARM_UNTEN] = (
-                    bool(limit_unten and aktueller_kurs <= limit_unten)
+                # Alarm unten: Kurs < Limit unten (Limit muss gesetzt und > 0 sein)
+                stock_data[ATTR_ALARM_UNTEN] = bool(
+                    limit_unten and limit_unten > 0 and aktueller_kurs < limit_unten
                 )
             else:
                 stock_data[ATTR_ALARM_OBEN] = False
@@ -109,16 +117,15 @@ class MyPortfolioCoordinator(DataUpdateCoordinator):
         return updated_data
 
     # ------------------------------------------------------------------ #
-    #  Portfolio management helpers                                        #
+    #  Portfolio-Verwaltung                                                #
     # ------------------------------------------------------------------ #
 
     def get_stocks(self) -> dict[str, dict]:
-        """Return current stock definitions."""
+        """Alle gespeicherten Aktien zurückgeben."""
         return self._stocks
 
     async def async_add_stock(self, stock_data: dict) -> str:
-        """Add a new stock to the portfolio."""
-        import uuid
+        """Neue Aktie hinzufügen und persistieren."""
         stock_id = str(uuid.uuid4())
         self._stocks[stock_id] = stock_data
         await self._async_save()
@@ -126,23 +133,23 @@ class MyPortfolioCoordinator(DataUpdateCoordinator):
         return stock_id
 
     async def async_update_stock(self, stock_id: str, stock_data: dict) -> None:
-        """Update an existing stock entry."""
+        """Bestehende Aktie aktualisieren."""
         if stock_id not in self._stocks:
-            raise ValueError(f"Stock {stock_id} not found")
+            raise ValueError(f"Aktie {stock_id} nicht gefunden")
         self._stocks[stock_id].update(stock_data)
         await self._async_save()
         await self.async_request_refresh()
 
     async def async_remove_stock(self, stock_id: str) -> None:
-        """Remove a stock from the portfolio."""
+        """Aktie aus Portfolio entfernen."""
         self._stocks.pop(stock_id, None)
         await self._async_save()
 
     async def _async_save(self) -> None:
-        """Persist portfolio to HA storage."""
+        """Portfolio in HA-Storage speichern."""
         await self._store.async_save({"stocks": self._stocks})
 
     async def async_shutdown(self) -> None:
-        """Close HTTP session on unload."""
+        """HTTP-Session beim Entladen schließen."""
         if self._session and not self._session.closed:
             await self._session.close()

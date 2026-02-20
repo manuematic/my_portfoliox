@@ -11,6 +11,7 @@ from homeassistant.core import callback
 from homeassistant.helpers import selector
 
 from .const import (
+    ATTR_BEZEICHNUNG,
     DOMAIN,
     CONF_PORTFOLIO_NAME,
     CONF_SCAN_INTERVAL,
@@ -34,6 +35,9 @@ def _stock_schema(defaults: dict | None = None) -> vol.Schema:
     d = defaults or {}
     return vol.Schema(
         {
+            vol.Required(ATTR_BEZEICHNUNG, default=d.get(ATTR_BEZEICHNUNG, "")): selector.selector(
+                {"text": {"type": "text"}}
+            ),
             vol.Required(ATTR_KUERZEL, default=d.get(ATTR_KUERZEL, "")): selector.selector(
                 {"text": {"type": "text"}}
             ),
@@ -135,7 +139,9 @@ class MyPortfolioOptionsFlow(config_entries.OptionsFlow):
         # Aktien-Übersicht für die Beschreibung aufbereiten
         stock_lines = []
         for sid, s in stocks.items():
-            stock_lines.append(f"• {s.get(ATTR_KUERZEL,'?')}  —  {s.get(ATTR_STUECKZAHL,'?')} Stk. @ {s.get(ATTR_PREIS,'?')}")
+            bezeichnung = s.get(ATTR_BEZEICHNUNG, "").strip()
+            label = f"{bezeichnung} ({s.get(ATTR_KUERZEL,'?')})" if bezeichnung else s.get(ATTR_KUERZEL,'?')
+            stock_lines.append(f"• {label}  —  {s.get(ATTR_STUECKZAHL,'?')} Stk. @ {s.get(ATTR_PREIS,'?')}")
         overview = "\n".join(stock_lines) if stock_lines else "Noch keine Aktien im Portfolio."
 
         if user_input is not None:
@@ -220,7 +226,13 @@ class MyPortfolioOptionsFlow(config_entries.OptionsFlow):
         options = [
             selector.SelectOptionDict(
                 value=sid,
-                label=f"{s.get(ATTR_KUERZEL,'?')}  ({s.get(ATTR_STUECKZAHL,'?')} Stk. @ {s.get(ATTR_PREIS,'?')})"
+                label=(
+                    f"{s.get(ATTR_BEZEICHNUNG,'').strip() or s.get(ATTR_KUERZEL,'?')}"
+                    f" ({s.get(ATTR_KUERZEL,'?')})  —  "
+                    f"{s.get(ATTR_STUECKZAHL,'?')} Stk. @ {s.get(ATTR_PREIS,'?')}"
+                    if s.get(ATTR_BEZEICHNUNG, "").strip()
+                    else f"{s.get(ATTR_KUERZEL,'?')}  —  {s.get(ATTR_STUECKZAHL,'?')} Stk. @ {s.get(ATTR_PREIS,'?')}"
+                )
             )
             for sid, s in stocks.items()
         ]
@@ -359,6 +371,7 @@ class MyPortfolioOptionsFlow(config_entries.OptionsFlow):
         limit_oben = user_input.get(ATTR_LIMIT_OBEN)
         limit_unten = user_input.get(ATTR_LIMIT_UNTEN)
         return {
+            ATTR_BEZEICHNUNG: str(user_input.get(ATTR_BEZEICHNUNG, "")).strip(),
             ATTR_KUERZEL: kuerzel,
             ATTR_PREIS: round(float(user_input[ATTR_PREIS]), 3),
             ATTR_STUECKZAHL: int(user_input[ATTR_STUECKZAHL]),
