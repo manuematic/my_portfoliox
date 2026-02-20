@@ -12,6 +12,8 @@
  *      title: Meine Portfolios   # optional
  */
 
+const SUMMARY_KEYS = ["gesamtinvest", "gesamtwert", "portfoliodifferenz", "portfolioprozent"];
+
 class MyPortfolioOverviewCard extends HTMLElement {
   constructor() {
     super();
@@ -30,13 +32,14 @@ class MyPortfolioOverviewCard extends HTMLElement {
 
     for (const [entityId, state] of Object.entries(this._hass.states)) {
       if (!entityId.startsWith("sensor.")) continue;
-      const attr = state.attributes;
+      const attr = state.attributes || {};
       const portfolio = attr.portfolio_name;
       if (!portfolio) continue;
 
+      // Portfolio-Eintrag anlegen falls noch nicht vorhanden
       if (!portfolioMap[portfolio]) {
         portfolioMap[portfolio] = {
-          name: portfolio,
+          name:               portfolio,
           gesamtinvest:       null,
           gesamtwert:         null,
           portfoliodifferenz: null,
@@ -44,18 +47,21 @@ class MyPortfolioOverviewCard extends HTMLElement {
           stockCount:         0,
         };
       }
-
       const p = portfolioMap[portfolio];
 
-      // Summary-Sensor: hat "summary_key" Attribut
-      if (attr.summary_key) {
-        const val = parseFloat(state.state);
-        if (!isNaN(val)) {
-          p[attr.summary_key] = val;
+      const summaryKey = attr.summary_key;
+
+      if (summaryKey && SUMMARY_KEYS.includes(summaryKey)) {
+        // Summary-Sensor: Wert direkt aus state.state lesen
+        const raw = state.state;
+        if (raw !== "unavailable" && raw !== "unknown" && raw !== null) {
+          const val = parseFloat(raw);
+          if (!isNaN(val)) {
+            p[summaryKey] = val;
+          }
         }
-      }
-      // Aktien-Sensor: hat "kuerzel" Attribut
-      else if (attr.kuerzel !== undefined) {
+      } else if (attr.kuerzel !== undefined && !summaryKey) {
+        // Aktien-Sensor
         p.stockCount++;
       }
     }
@@ -65,8 +71,8 @@ class MyPortfolioOverviewCard extends HTMLElement {
 
   _render() {
     if (!this._hass) return;
-    const config   = this._config || {};
-    const title    = config.title || "Portfolio-Übersicht";
+    const config     = this._config || {};
+    const title      = config.title || "Portfolio-Übersicht";
     const portfolios = this._getPortfolios();
 
     const fmt = (v, decimals = 2, suffix = "") => {
@@ -76,8 +82,9 @@ class MyPortfolioOverviewCard extends HTMLElement {
         maximumFractionDigits: decimals,
       }) + suffix;
     };
-    const sign = v => (v !== null && v >= 0 ? "+" : "");
-    const clr  = v => v === null ? "var(--secondary-text-color)" : v >= 0 ? "#22c55e" : "#ef4444";
+    const sign = v => (v !== null && !isNaN(v) && v >= 0) ? "+" : "";
+    const clr  = v => (v === null || isNaN(v)) ? "var(--secondary-text-color)"
+                    : v >= 0 ? "#22c55e" : "#ef4444";
 
     const renderPortfolio = (p, idx) => `
       <div class="portfolio-card" style="animation-delay:${idx * 0.08}s">
@@ -109,17 +116,17 @@ class MyPortfolioOverviewCard extends HTMLElement {
             ${sign(p.portfoliodifferenz)}${fmt(p.portfoliodifferenz, 3)} €
           </span>
         </div>
-        ${p.gesamtinvest !== null && p.portfolioprozent !== null ? `
+        ${p.portfolioprozent !== null ? `
         <div class="progress-track">
           <div class="progress-fill" style="
             width: ${Math.min(Math.abs(p.portfolioprozent), 50) * 2}%;
             background: ${clr(p.portfoliodifferenz)};
-            ${p.portfoliodifferenz < 0 ? "margin-left:auto;" : ""}
+            ${(p.portfoliodifferenz !== null && p.portfoliodifferenz < 0) ? "margin-left:auto;" : ""}
           "></div>
         </div>` : ""}
       </div>`;
 
-    // Gesamtsumme
+    // Gesamtsumme über alle Portfolios
     const totalInvest = portfolios.reduce((s, p) => s + (p.gesamtinvest ?? 0), 0);
     const totalWert   = portfolios.reduce((s, p) => s + (p.gesamtwert   ?? 0), 0);
     const totalDiff   = totalWert - totalInvest;
@@ -248,6 +255,7 @@ class MyPortfolioOverviewCard extends HTMLElement {
           background: rgba(255,255,255,0.07);
           border-radius: 3px;
           overflow: hidden;
+          display: flex;
         }
         .progress-fill {
           height: 5px;
@@ -285,6 +293,13 @@ class MyPortfolioOverviewCard extends HTMLElement {
           text-align: center;
           font-size: 1.05rem;
           color: var(--secondary-text-color);
+        }
+        .debug {
+          padding: 0.5rem 1.1rem;
+          font-size: 0.75rem;
+          font-family: monospace;
+          color: var(--secondary-text-color);
+          opacity: 0.5;
         }
       </style>
       <ha-card>
