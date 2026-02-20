@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from typing import TypedDict
 
 import aiohttp
 
@@ -17,11 +18,27 @@ _YAHOO_HEADERS = {
 }
 
 
+class PriceData(TypedDict, total=False):
+    """Rückgabestruktur eines Kursabrufs."""
+    aktueller_kurs:       float | None
+    kurs_vortag:          float | None
+    tages_aenderung_abs:  float | None
+    tages_aenderung_pct:  float | None
+
+
+_EMPTY: PriceData = {
+    "aktueller_kurs":      None,
+    "kurs_vortag":         None,
+    "tages_aenderung_abs": None,
+    "tages_aenderung_pct": None,
+}
+
+
 async def fetch_price_yahoo(
     session: aiohttp.ClientSession,
     kuerzel: str,
-) -> float | None:
-    """Kurs von Yahoo Finance JSON-API abrufen (query1 / query2 Fallback)."""
+) -> PriceData:
+    """Kurs + Tagesdaten von Yahoo Finance JSON-API abrufen."""
     symbol = kuerzel.upper()
 
     for host in YAHOO_API_HOSTS:
@@ -35,9 +52,9 @@ async def fetch_price_yahoo(
             ) as resp:
                 if resp.status == 404:
                     _LOGGER.warning("Yahoo: Symbol '%s' nicht gefunden (404)", symbol)
-                    return None
+                    return _EMPTY.copy()
                 if resp.status == 429:
-                    _LOGGER.warning("Yahoo: Rate-limit für '%s', versuche nächsten Host", symbol)
+                    _LOGGER.warning("Yahoo: Rate-limit für '%s', nächster Host", symbol)
                     await asyncio.sleep(1)
                     continue
                 if resp.status != 200:
@@ -48,22 +65,49 @@ async def fetch_price_yahoo(
                 result = data.get("chart", {}).get("result") or []
                 if not result:
                     _LOGGER.warning("Yahoo: Leeres Ergebnis für '%s'", symbol)
-                    return None
+                    return _EMPTY.copy()
 
                 meta = result[0].get("meta", {})
-                price = meta.get("regularMarketPrice") or meta.get("previousClose")
-                if price is not None:
-                    _LOGGER.debug("Yahoo: Kurs %s = %s", symbol, price)
-                    return float(price)
 
-                _LOGGER.warning("Yahoo: Kein Kursfeld für '%s' in %s", symbol, list(meta.keys()))
-                return None
+                # ── Aktueller Kurs ─────────────────────────────────────────
+                kurs = meta.get("regularMarketPrice")
+                if kurs is None:
+                    kurs = meta.get("previousClose")   # Fallback außerhalb Handelszeit
+
+                # ── Vortag & Tagesänderung ─────────────────────────────────
+                vortag = meta.get("previousClose") or meta.get("chartPreviousClose")
+
+                # Yahoo liefert regularMarketChange und regularMarketChangePercent
+                tages_abs = meta.get("regularMarketChange")
+                tages_pct = meta.get("regularMarketChangePercent")
+
+                # Fallback: selbst berechnen wenn Yahoo-Felder fehlen
+                if kurs is not None and vortag and tages_abs is None:
+                    tages_abs = kurs - vortag
+                if kurs is not None and vortag and tages_pct is None and vortag != 0:
+                    tages_pct = (kurs - vortag) / vortag * 100.0
+
+                result_data: PriceData = {
+                    "aktueller_kurs":      round(float(kurs), 5)       if kurs      is not None else None,
+                    "kurs_vortag":         round(float(vortag), 5)     if vortag    is not None else None,
+                    "tages_aenderung_abs": round(float(tages_abs), 3)  if tages_abs is not None else None,
+                    "tages_aenderung_pct": round(float(tages_pct), 2)  if tages_pct is not None else None,
+                }
+
+                _LOGGER.debug(
+                    "Yahoo: %s kurs=%.3f vortag=%s tages_pct=%s",
+                    symbol,
+                    kurs or 0,
+                    vortag,
+                    tages_pct,
+                )
+                return result_data
 
         except (aiohttp.ClientError, asyncio.TimeoutError) as err:
-            _LOGGER.warning("Yahoo: Verbindungsfehler für '%s' auf %s: %s", symbol, host, err)
+            _LOGGER.warning("Yahoo: Verbindungsfehler '%s' auf %s: %s", symbol, host, err)
         except Exception as err:  # pylint: disable=broad-except
-            _LOGGER.error("Yahoo: Unerwarteter Fehler für '%s': %s", symbol, err)
-            return None
+            _LOGGER.error("Yahoo: Unerwarteter Fehler '%s': %s", symbol, err)
+            return _EMPTY.copy()
 
-    _LOGGER.error("Yahoo: Kurs für '%s' nicht abrufbar (alle Hosts fehlgeschlagen)", symbol)
-    return None
+    _LOGGER.error("Yahoo: '%s' nicht abrufbar (alle Hosts fehlgeschlagen)", symbol)
+    return _EMPTY.copy()

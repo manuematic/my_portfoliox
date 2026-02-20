@@ -32,6 +32,9 @@ from .const import (
     ATTR_ALARM_OBEN,
     ATTR_ALARM_UNTEN,
     ATTR_GEWINN,
+    ATTR_KURS_VORTAG,
+    ATTR_TAGES_ABS,
+    ATTR_TAGES_PCT,
     ATTR_AKTUELLER_KURS,
     ATTR_KURSQUELLE_URL,
     ATTR_GESAMT_INVEST,
@@ -85,12 +88,13 @@ class MyPortfolioCoordinator(DataUpdateCoordinator):
             self.portfolio_name, len(self._stocks), self.data_source,
         )
 
-    async def _fetch_price(self, stock: dict) -> float | None:
+    async def _fetch_price(self, stock: dict) -> dict:
         """Kurs für eine Aktie abhängig von der konfigurierten Quelle abrufen."""
         source = self.data_source
 
         if source == SOURCE_YAHOO:
             return await fetch_price_yahoo(self._session, stock.get(ATTR_KUERZEL, ""))
+        # scraper-Quellen liefern nur float → in PriceData-Dict wrappen
 
         # finanzen.net und finanzen100: URL aus Aktien-Stammdaten lesen
         url = stock.get(ATTR_KURSQUELLE_URL, "").strip()
@@ -102,9 +106,13 @@ class MyPortfolioCoordinator(DataUpdateCoordinator):
             return None
 
         if source == SOURCE_FINANZEN_NET:
-            return await fetch_price_finanzen_net(self._session, url)
-        if source == SOURCE_FINANZEN100:
-            return await fetch_price_finanzen100(self._session, url)
+            p = await fetch_price_finanzen_net(self._session, url)
+        elif source == SOURCE_FINANZEN100:
+            p = await fetch_price_finanzen100(self._session, url)
+        else:
+            p = None
+        return {"aktueller_kurs": p, "kurs_vortag": None,
+                "tages_aenderung_abs": None, "tages_aenderung_pct": None}
 
         _LOGGER.error("Unbekannte Datenquelle: %s", source)
         return None
@@ -120,7 +128,8 @@ class MyPortfolioCoordinator(DataUpdateCoordinator):
         updated_data: dict[str, dict] = {}
 
         for stock_id, stock in self._stocks.items():
-            aktueller_kurs = await self._fetch_price(stock)
+            price_data = await self._fetch_price(stock)
+            aktueller_kurs = price_data.get("aktueller_kurs")
 
             # Letzten bekannten Kurs behalten wenn Abruf fehlschlägt
             if aktueller_kurs is None:
@@ -128,6 +137,10 @@ class MyPortfolioCoordinator(DataUpdateCoordinator):
 
             stock_data = dict(stock)
             stock_data[ATTR_AKTUELLER_KURS] = aktueller_kurs
+            # Tagesdaten – nur überschreiben wenn frisch abgerufen
+            stock_data[ATTR_KURS_VORTAG]  = price_data.get("kurs_vortag")          or stock.get(ATTR_KURS_VORTAG)
+            stock_data[ATTR_TAGES_ABS]    = price_data.get("tages_aenderung_abs")  or stock.get(ATTR_TAGES_ABS)
+            stock_data[ATTR_TAGES_PCT]    = price_data.get("tages_aenderung_pct")  or stock.get(ATTR_TAGES_PCT)
 
             preis = stock.get(ATTR_PREIS) or 0.0
 

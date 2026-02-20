@@ -27,6 +27,9 @@ from .const import (
     ATTR_ALARM_OBEN,
     ATTR_ALARM_UNTEN,
     ATTR_GEWINN,
+    ATTR_KURS_VORTAG,
+    ATTR_TAGES_ABS,
+    ATTR_TAGES_PCT,
     ATTR_AKTUELLER_KURS,
     ATTR_PORTFOLIO_NAME,
     ATTR_GESAMT_INVEST,
@@ -134,6 +137,9 @@ class StockSensor(CoordinatorEntity[MyPortfolioCoordinator], SensorEntity):
             ATTR_ALARM_OBEN:      data.get(ATTR_ALARM_OBEN, False),
             ATTR_ALARM_UNTEN:     data.get(ATTR_ALARM_UNTEN, False),
             ATTR_GEWINN:          data.get(ATTR_GEWINN),
+            ATTR_KURS_VORTAG:     data.get(ATTR_KURS_VORTAG),
+            ATTR_TAGES_ABS:       data.get(ATTR_TAGES_ABS),
+            ATTR_TAGES_PCT:       data.get(ATTR_TAGES_PCT),
         }
 
     @property
