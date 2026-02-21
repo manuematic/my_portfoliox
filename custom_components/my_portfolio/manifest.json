@@ -1,7 +1,7 @@
 {
   "domain": "my_portfolio",
   "name": "Mein Portfolio",
-  "version": "0.7.1",
+  "version": "0.7.2",
   "documentation": "https://github.com/manuematic/my_portfolio",
   "issue_tracker": "https://github.com/manuematic/my_portfolio/issues",
   "codeowners": [
@@ -13,6 +13,5 @@
   "dependencies": [],
   "after_dependencies": [],
   "iot_class": "cloud_polling",
-  "config_flow": true,
-  "icon": "icons/icon.svg"
+  "config_flow": true
 }
