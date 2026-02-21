@@ -176,7 +176,7 @@ class MyPortfolioCoordinator(DataUpdateCoordinator):
 
         for stock_id, stock in self._stocks.items():
             preis = stock.get(ATTR_PREIS) or 0.0
-            stueckzahl = stock.get(ATTR_STUECKZAHL) or 0
+            stueckzahl = float(stock.get(ATTR_STUECKZAHL) or 0)
             aktueller_kurs = updated_data.get(stock_id, {}).get(ATTR_AKTUELLER_KURS)
 
             gesamt_invest += preis * stueckzahl

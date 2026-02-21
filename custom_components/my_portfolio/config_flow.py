@@ -366,7 +366,7 @@ class MyPortfolioOptionsFlow(config_entries.OptionsFlow):
             ATTR_WKN:            str(user_input.get(ATTR_WKN, "")).strip().upper(),
             ATTR_ISIN:           str(user_input.get(ATTR_ISIN, "")).strip().upper(),
             ATTR_PREIS:          round(float(user_input[ATTR_PREIS]), 3),
-            ATTR_STUECKZAHL:     int(user_input[ATTR_STUECKZAHL]),
+            ATTR_STUECKZAHL:     round(float(user_input[ATTR_STUECKZAHL]), 2),
             ATTR_KAUFDATUM:      user_input[ATTR_KAUFDATUM],
             ATTR_LIMIT_OBEN:     round(float(limit_oben), 3) if limit_oben else None,
             ATTR_LIMIT_UNTEN:    round(float(limit_unten), 3) if limit_unten else None,

@@ -1,7 +1,7 @@
 {
   "domain": "my_portfolio",
   "name": "Mein Portfolio",
-  "version": "0.7.2",
+  "version": "0.7.3",
   "documentation": "https://github.com/manuematic/my_portfolio",
   "issue_tracker": "https://github.com/manuematic/my_portfolio/issues",
   "codeowners": [
