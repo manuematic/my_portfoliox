@@ -1,20 +1,20 @@
 /**
- * my-portfolio-daily-all-card  v0.8.0
- * Alle Aktien sortiert nach heutiger Tagesperformance.
+ * my-portfolio-total-performance-card  v0.8.0
+ * Gesamtperformance aller Aktien seit Kauf – sortierbar.
  *
  * YAML-Konfiguration:
- *   type: custom:my-portfolio-daily-all-card
- *   title: Tagesperformance        # optional
+ *   type: custom:my-portfolio-total-performance-card
+ *   title: Gesamtperformance       # optional
  *   sort: pct                      # pct | eur | alpha  (Standard: pct)
  *   order: desc                    # desc | asc         (Standard: desc)
  */
 
-class MyPortfolioDailyAllCard extends HTMLElement {
+class MyPortfolioTotalPerformanceCard extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({ mode: "open" });
-    this._sortBy  = "pct";
-    this._order   = "desc";
+    this._sortBy = "pct";
+    this._order  = "desc";
   }
 
   setConfig(config) {
@@ -34,19 +34,27 @@ class MyPortfolioDailyAllCard extends HTMLElement {
       if (!entityId.startsWith("sensor.")) continue;
       const attr = state.attributes || {};
       if (attr.kuerzel === undefined || attr.summary_key !== undefined) continue;
-      const pct = parseFloat(attr.tages_aenderung_pct);
-      if (isNaN(pct)) continue;
-      const stueckzahl = parseFloat(attr.stueckzahl) || 0;
-      const tages_abs  = parseFloat(attr.tages_aenderung_abs) || null;
+
+      const kurs     = parseFloat(state.state);
+      const preis    = parseFloat(attr.preis);
+      const stueck   = parseFloat(attr.stueckzahl) || 0;
+      const gewinn   = parseFloat(attr.gewinn);  // % seit Kauf
+
+      if (isNaN(kurs) || isNaN(preis) || isNaN(gewinn)) continue;
+
+      // Absoluter Gewinn in € = (Kurs - Kaufpreis) * Stückzahl
+      const gewinn_eur = (kurs - preis) * stueck;
+
       stocks.push({
         bezeichnung: (attr.bezeichnung || attr.kuerzel || "").trim(),
         kuerzel:     attr.kuerzel || "?",
         portfolio:   attr.portfolio_name || "",
-        kurs:        parseFloat(state.state) || null,
-        tages_pct:   pct,
-        tages_abs:   tages_abs,
-        tages_wert:  tages_abs !== null ? tages_abs * stueckzahl : null,
-        stueckzahl,
+        kurs,
+        preis,
+        stueck,
+        gewinn_pct:  gewinn,
+        gewinn_eur:  round2(gewinn_eur),
+        kaufdatum:   attr.kaufdatum || "",
       });
     }
     return stocks;
@@ -59,9 +67,9 @@ class MyPortfolioDailyAllCard extends HTMLElement {
       if (this._sortBy === "alpha") {
         diff = a.bezeichnung.localeCompare(b.bezeichnung, "de");
       } else if (this._sortBy === "eur") {
-        diff = (a.tages_wert ?? -Infinity) - (b.tages_wert ?? -Infinity);
+        diff = a.gewinn_eur - b.gewinn_eur;
       } else {
-        diff = a.tages_pct - b.tages_pct;
+        diff = a.gewinn_pct - b.gewinn_pct;
       }
       return asc ? diff : -diff;
     });
@@ -79,9 +87,9 @@ class MyPortfolioDailyAllCard extends HTMLElement {
 
   _render() {
     if (!this._hass) return;
-    const config  = this._config || {};
-    const title   = config.title || "Tagesperformance";
-    const stocks  = this._sort(this._getStocks());
+    const config = this._config || {};
+    const title  = config.title || "Gesamtperformance";
+    const stocks = this._sort(this._getStocks());
 
     const fmt = (v, dec = 2) =>
       v !== null && !isNaN(v)
@@ -91,19 +99,30 @@ class MyPortfolioDailyAllCard extends HTMLElement {
     const color = v => v >= 0 ? "#22c55e" : "#ef4444";
     const arrow = () => this._order === "desc" ? "↓" : "↑";
 
+    // Gesamtsummen
+    const totalInvest  = stocks.reduce((s, a) => s + a.preis  * a.stueck, 0);
+    const totalWert    = stocks.reduce((s, a) => s + a.kurs   * a.stueck, 0);
+    const totalEur     = totalWert - totalInvest;
+    const totalPct     = totalInvest ? (totalWert - totalInvest) / totalInvest * 100 : 0;
+
+    // Normalisierung für Balken
     const maxAbs = stocks.length
-      ? Math.max(...stocks.map(s => Math.abs(s.tages_pct)))
+      ? Math.max(...stocks.map(s =>
+          this._sortBy === "eur" ? Math.abs(s.gewinn_eur) : Math.abs(s.gewinn_pct)
+        ))
       : 1;
 
-    const totalWert = stocks.reduce((s, a) =>
-      a.tages_wert !== null ? s + a.tages_wert : s, 0);
-
-    const btnClass = (field) =>
-      `sort-btn${this._sortBy === field ? " active" : ""}`;
+    const btnClass = (f) => `sort-btn${this._sortBy === f ? " active" : ""}`;
 
     const renderRow = (s, idx) => {
-      const barW   = maxAbs > 0 ? (Math.abs(s.tages_pct) / maxAbs) * 88 : 0;
-      const isPos  = s.tages_pct >= 0;
+      const val    = this._sortBy === "eur" ? s.gewinn_eur : s.gewinn_pct;
+      const barW   = maxAbs > 0 ? (Math.abs(val) / maxAbs) * 88 : 0;
+      const isPos  = s.gewinn_pct >= 0;
+      // Kaufdatum formatieren
+      const datum  = s.kaufdatum
+        ? new Date(s.kaufdatum).toLocaleDateString("de-DE", { day:"2-digit", month:"2-digit", year:"2-digit" })
+        : "";
+
       return `
         <div class="row" style="animation-delay:${idx * 0.035}s">
           <div class="rank">${idx + 1}</div>
@@ -112,34 +131,35 @@ class MyPortfolioDailyAllCard extends HTMLElement {
               <span class="name">${s.bezeichnung}</span>
               <span class="ticker">${s.kuerzel}</span>
             </div>
+            <div class="sub-row">
+              <span class="kaufpreis">Kauf ${fmt(s.preis, 3)} €${datum ? " · " + datum : ""}</span>
+              <span class="kurs-aktuell">${fmt(s.kurs, 3)} €</span>
+            </div>
             <div class="bar-track">
               <div class="bar-fill" style="
                 width:${barW}%;
-                background:${color(s.tages_pct)};
+                background:${color(s.gewinn_pct)};
                 ${!isPos ? "margin-left:auto;" : ""}
               "></div>
             </div>
           </div>
           <div class="values">
-            <span class="pct" style="color:${color(s.tages_pct)}">
-              ${sign(s.tages_pct)}${fmt(s.tages_pct)}%
+            <span class="pct" style="color:${color(s.gewinn_pct)}">
+              ${sign(s.gewinn_pct)}${fmt(s.gewinn_pct)}%
             </span>
-            <span class="eur" style="color:${color(s.tages_pct)}">
-              ${sign(s.tages_abs)}${fmt(s.tages_abs, 3)} €
+            <span class="eur" style="color:${color(s.gewinn_eur)}">
+              ${sign(s.gewinn_eur)}${fmt(s.gewinn_eur, 2)} €
             </span>
-            ${s.tages_wert !== null ? `
-            <span class="pos-wert" style="color:${color(s.tages_wert)}">
-              ${sign(s.tages_wert)}${fmt(s.tages_wert, 2)} €
-            </span>` : ""}
           </div>
         </div>`;
     };
 
-    // Trennlinie zwischen positiv/negativ nur bei pct/eur-Sortierung desc
     const addDivider = (s, i) => {
       if (this._sortBy === "alpha" || this._order === "asc") return false;
       const next = stocks[i + 1];
-      return next && s.tages_pct >= 0 && next.tages_pct < 0;
+      const val  = this._sortBy === "eur" ? s.gewinn_eur : s.gewinn_pct;
+      const nval = next ? (this._sortBy === "eur" ? next.gewinn_eur : next.gewinn_pct) : null;
+      return nval !== null && val >= 0 && nval < 0;
     };
 
     this.shadowRoot.innerHTML = `
@@ -152,12 +172,15 @@ class MyPortfolioDailyAllCard extends HTMLElement {
           overflow: hidden;
           font-family: 'Outfit', sans-serif;
         }
+        /* ── Header ── */
         .header {
-          padding: 1.4rem 1.6rem 0.3rem;
+          padding: 1.4rem 1.6rem 0;
           display: flex;
-          align-items: baseline;
+          align-items: flex-start;
           justify-content: space-between;
+          gap: 1rem;
         }
+        .header-left {}
         .header-title {
           font-size: 1.05rem;
           font-weight: 700;
@@ -165,18 +188,40 @@ class MyPortfolioDailyAllCard extends HTMLElement {
           text-transform: uppercase;
           color: var(--secondary-text-color);
         }
-        .header-total {
-          font-family: 'DM Mono', monospace;
-          font-size: 1.1rem;
-          font-weight: 500;
-          color: ${color(totalWert)};
+        .header-summary {
+          display: flex;
+          gap: 1.2rem;
+          margin-top: 0.5rem;
         }
-        /* ── Sortier-Toolbar ── */
+        .summary-item {}
+        .summary-label {
+          font-size: 0.68rem;
+          text-transform: uppercase;
+          letter-spacing: 0.1em;
+          color: var(--secondary-text-color);
+          font-weight: 600;
+        }
+        .summary-value {
+          font-family: 'DM Mono', monospace;
+          font-size: 1.0rem;
+          font-weight: 500;
+          margin-top: 0.1rem;
+        }
+        .header-pct {
+          font-family: 'DM Mono', monospace;
+          font-size: 2rem;
+          font-weight: 700;
+          color: ${color(totalPct)};
+          line-height: 1;
+          padding-top: 0.2rem;
+          flex-shrink: 0;
+        }
+        /* ── Toolbar ── */
         .toolbar {
           display: flex;
           align-items: center;
           gap: 0.4rem;
-          padding: 0.3rem 1.6rem 0.6rem;
+          padding: 0.7rem 1.6rem 0.5rem;
         }
         .toolbar-label {
           font-size: 0.72rem;
@@ -225,12 +270,12 @@ class MyPortfolioDailyAllCard extends HTMLElement {
           color: var(--primary-text-color);
         }
         /* ── Rows ── */
-        .rows { padding: 0 0 0.5rem; }
+        .rows { padding: 0 0 0.4rem; }
         .row {
           display: flex;
           align-items: center;
           gap: 0.8rem;
-          padding: 0.55rem 1.6rem;
+          padding: 0.6rem 1.6rem;
           transition: background 0.15s;
           animation: fadeIn 0.3s ease both;
         }
@@ -267,8 +312,23 @@ class MyPortfolioDailyAllCard extends HTMLElement {
           font-family: 'DM Mono', monospace;
           flex-shrink: 0;
         }
+        .sub-row {
+          display: flex;
+          justify-content: space-between;
+          margin-top: 0.1rem;
+        }
+        .kaufpreis {
+          font-size: 0.72rem;
+          color: var(--secondary-text-color);
+          font-family: 'DM Mono', monospace;
+        }
+        .kurs-aktuell {
+          font-size: 0.72rem;
+          color: var(--secondary-text-color);
+          font-family: 'DM Mono', monospace;
+        }
         .bar-track {
-          margin-top: 0.35rem;
+          margin-top: 0.3rem;
           height: 3px;
           background: rgba(255,255,255,0.06);
           border-radius: 2px;
@@ -291,13 +351,8 @@ class MyPortfolioDailyAllCard extends HTMLElement {
         .eur {
           display: block;
           font-family: 'DM Mono', monospace;
-          font-size: 0.82rem;
-        }
-        .pos-wert {
-          display: block;
-          font-family: 'DM Mono', monospace;
-          font-size: 0.75rem;
-          opacity: 0.7;
+          font-size: 0.85rem;
+          margin-top: 0.05rem;
         }
         .divider {
           height: 1px;
@@ -320,18 +375,36 @@ class MyPortfolioDailyAllCard extends HTMLElement {
       </style>
       <ha-card>
         <div class="header">
-          <div class="header-title">${title}</div>
-          <div class="header-total">
-            ${sign(totalWert)}${fmt(totalWert, 2)} € heute
+          <div class="header-left">
+            <div class="header-title">${title}</div>
+            <div class="header-summary">
+              <div class="summary-item">
+                <div class="summary-label">Invest</div>
+                <div class="summary-value">${fmt(totalInvest, 2)} €</div>
+              </div>
+              <div class="summary-item">
+                <div class="summary-label">Aktuell</div>
+                <div class="summary-value">${fmt(totalWert, 2)} €</div>
+              </div>
+              <div class="summary-item">
+                <div class="summary-label">Gewinn</div>
+                <div class="summary-value" style="color:${color(totalEur)}">
+                  ${sign(totalEur)}${fmt(totalEur, 2)} €
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="header-pct">
+            ${sign(totalPct)}${fmt(totalPct)}%
           </div>
         </div>
 
         <div class="toolbar">
           <span class="toolbar-label">Sort:</span>
           <button class="${btnClass("pct")}"
-            onclick="this.getRootNode().host._toggleSort('pct')">% Tages</button>
+            onclick="this.getRootNode().host._toggleSort('pct')">% Gesamt</button>
           <button class="${btnClass("eur")}"
-            onclick="this.getRootNode().host._toggleSort('eur')">€ Tages</button>
+            onclick="this.getRootNode().host._toggleSort('eur')">€ Gesamt</button>
           <button class="${btnClass("alpha")}"
             onclick="this.getRootNode().host._toggleSort('alpha')">A–Z</button>
           <button class="order-btn"
@@ -341,7 +414,7 @@ class MyPortfolioDailyAllCard extends HTMLElement {
         </div>
 
         ${stocks.length === 0
-          ? `<div class="empty">Keine Tagesdaten verfügbar.</div>`
+          ? `<div class="empty">Keine Aktien-Sensoren gefunden.</div>`
           : `<div class="rows">
                ${stocks.map((s, i) => {
                  const row = renderRow(s, i);
@@ -349,19 +422,22 @@ class MyPortfolioDailyAllCard extends HTMLElement {
                  return row + div;
                }).join("")}
              </div>
-             <div class="footer">Tagesperformance · ${stocks.length} Aktien</div>
+             <div class="footer">Performance seit Kauf · ${stocks.length} Aktien</div>
           `}
       </ha-card>`;
   }
 
-  getCardSize() { return Math.max(4, Math.ceil((this._getStocks()?.length || 0) * 0.65) + 3); }
-  static getStubConfig() { return { title: "Tagesperformance", sort: "pct", order: "desc" }; }
+  getCardSize() { return Math.max(5, Math.ceil((this._getStocks()?.length || 0) * 0.8) + 4); }
+  static getStubConfig() { return { title: "Gesamtperformance", sort: "pct", order: "desc" }; }
 }
 
-customElements.define("my-portfolio-daily-all-card", MyPortfolioDailyAllCard);
+// Hilfs-Rundung
+function round2(v) { return Math.round(v * 100) / 100; }
+
+customElements.define("my-portfolio-total-performance-card", MyPortfolioTotalPerformanceCard);
 window.customCards = window.customCards || [];
 window.customCards.push({
-  type: "my-portfolio-daily-all-card",
-  name: "Portfolio Tagesperformance (alle)",
-  description: "Alle Aktien sortiert nach Tagesperformance – mit Sortier-Optionen.",
+  type: "my-portfolio-total-performance-card",
+  name: "Portfolio Gesamtperformance",
+  description: "Alle Aktien nach Gesamtperformance seit Kauf – sortierbar.",
 });
