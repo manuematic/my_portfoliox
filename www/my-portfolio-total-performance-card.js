@@ -9,19 +9,31 @@
  *   order: desc                    # desc | asc         (Standard: desc)
  */
 
+// Sortierstatus außerhalb der Klasse – überlebt Neuinstanziierungen durch HA
+const _totalPerfState = new Map();
+let _totalPerfIdCounter = 0;
+
 class MyPortfolioTotalPerformanceCard extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({ mode: "open" });
-    this._sortBy = "pct";
-    this._order  = "desc";
+    this._uid = ++_totalPerfIdCounter;
   }
 
   setConfig(config) {
-    this._config  = config;
-    this._sortBy  = config.sort  || "pct";
-    this._order   = config.order || "desc";
+    this._config = config;
+    if (!_totalPerfState.has(this._uid)) {
+      _totalPerfState.set(this._uid, {
+        sortBy: config.sort  || "pct",
+        order:  config.order || "desc",
+      });
+    }
   }
+
+  get _sortBy()  { return (_totalPerfState.get(this._uid) || {}).sortBy || "pct"; }
+  get _order()   { return (_totalPerfState.get(this._uid) || {}).order  || "desc"; }
+  set _sortBy(v) { const s = _totalPerfState.get(this._uid) || {}; s.sortBy = v; _totalPerfState.set(this._uid, s); }
+  set _order(v)  { const s = _totalPerfState.get(this._uid) || {}; s.order  = v; _totalPerfState.set(this._uid, s); }
 
   set hass(hass) {
     this._hass = hass;
@@ -86,7 +98,7 @@ class MyPortfolioTotalPerformanceCard extends HTMLElement {
   }
 
   _render() {
-    if (!this._hass) return;
+    if (!this._hass || !_totalPerfState.has(this._uid)) return;
     const config = this._config || {};
     const title  = config.title || "Gesamtperformance";
     const stocks = this._sort(this._getStocks());

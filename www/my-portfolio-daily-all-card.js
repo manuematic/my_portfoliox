@@ -1,5 +1,5 @@
 /**
- * my-portfolio-daily-all-card  v0.8.0
+ * my-portfolio-daily-all-card  v0.8.2
  * Alle Aktien sortiert nach heutiger Tagesperformance.
  *
  * YAML-Konfiguration:
@@ -9,19 +9,33 @@
  *   order: desc                    # desc | asc         (Standard: desc)
  */
 
+// Sortierstatus außerhalb der Klasse – überlebt Neuinstanziierungen durch HA
+const _dailyAllState = new Map();
+let _dailyAllIdCounter = 0;
+
 class MyPortfolioDailyAllCard extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({ mode: "open" });
-    this._sortBy  = "pct";
-    this._order   = "desc";
+    // Eindeutige ID pro Instanz
+    this._uid = ++_dailyAllIdCounter;
   }
 
   setConfig(config) {
-    this._config  = config;
-    this._sortBy  = config.sort  || "pct";
-    this._order   = config.order || "desc";
+    this._config = config;
+    // Nur beim allerersten Mal den YAML-Default übernehmen
+    if (!_dailyAllState.has(this._uid)) {
+      _dailyAllState.set(this._uid, {
+        sortBy: config.sort  || "pct",
+        order:  config.order || "desc",
+      });
+    }
   }
+
+  get _sortBy()         { return (_dailyAllState.get(this._uid) || {}).sortBy || "pct"; }
+  get _order()          { return (_dailyAllState.get(this._uid) || {}).order  || "desc"; }
+  set _sortBy(v)        { const s = _dailyAllState.get(this._uid) || {}; s.sortBy = v; _dailyAllState.set(this._uid, s); }
+  set _order(v)         { const s = _dailyAllState.get(this._uid) || {}; s.order  = v; _dailyAllState.set(this._uid, s); }
 
   set hass(hass) {
     this._hass = hass;
@@ -36,15 +50,16 @@ class MyPortfolioDailyAllCard extends HTMLElement {
       if (attr.kuerzel === undefined || attr.summary_key !== undefined) continue;
       const pct = parseFloat(attr.tages_aenderung_pct);
       if (isNaN(pct)) continue;
-      const stueckzahl = parseFloat(attr.stueckzahl) || 0;
-      const tages_abs  = parseFloat(attr.tages_aenderung_abs) || null;
+      const stueckzahl   = parseFloat(attr.stueckzahl) || 0;
+      const tages_abs_v  = parseFloat(attr.tages_aenderung_abs);
+      const tages_abs    = isNaN(tages_abs_v) ? null : tages_abs_v;
       stocks.push({
         bezeichnung: (attr.bezeichnung || attr.kuerzel || "").trim(),
         kuerzel:     attr.kuerzel || "?",
         portfolio:   attr.portfolio_name || "",
         kurs:        parseFloat(state.state) || null,
         tages_pct:   pct,
-        tages_abs:   tages_abs,
+        tages_abs,
         tages_wert:  tages_abs !== null ? tages_abs * stueckzahl : null,
         stueckzahl,
       });
@@ -78,10 +93,11 @@ class MyPortfolioDailyAllCard extends HTMLElement {
   }
 
   _render() {
-    if (!this._hass) return;
-    const config  = this._config || {};
-    const title   = config.title || "Tagesperformance";
-    const stocks  = this._sort(this._getStocks());
+    if (!this._hass || !_dailyAllState.has(this._uid)) return;
+
+    const config = this._config || {};
+    const title  = config.title || "Tagesperformance";
+    const stocks = this._sort(this._getStocks());
 
     const fmt = (v, dec = 2) =>
       v !== null && !isNaN(v)
@@ -102,8 +118,8 @@ class MyPortfolioDailyAllCard extends HTMLElement {
       `sort-btn${this._sortBy === field ? " active" : ""}`;
 
     const renderRow = (s, idx) => {
-      const barW   = maxAbs > 0 ? (Math.abs(s.tages_pct) / maxAbs) * 88 : 0;
-      const isPos  = s.tages_pct >= 0;
+      const barW  = maxAbs > 0 ? (Math.abs(s.tages_pct) / maxAbs) * 88 : 0;
+      const isPos = s.tages_pct >= 0;
       return `
         <div class="row" style="animation-delay:${idx * 0.035}s">
           <div class="rank">${idx + 1}</div>
@@ -135,7 +151,6 @@ class MyPortfolioDailyAllCard extends HTMLElement {
         </div>`;
     };
 
-    // Trennlinie zwischen positiv/negativ nur bei pct/eur-Sortierung desc
     const addDivider = (s, i) => {
       if (this._sortBy === "alpha" || this._order === "asc") return false;
       const next = stocks[i + 1];
@@ -171,7 +186,6 @@ class MyPortfolioDailyAllCard extends HTMLElement {
           font-weight: 500;
           color: ${color(totalWert)};
         }
-        /* ── Sortier-Toolbar ── */
         .toolbar {
           display: flex;
           align-items: center;
@@ -224,7 +238,6 @@ class MyPortfolioDailyAllCard extends HTMLElement {
           background: rgba(255,255,255,0.1);
           color: var(--primary-text-color);
         }
-        /* ── Rows ── */
         .rows { padding: 0 0 0.5rem; }
         .row {
           display: flex;
@@ -248,11 +261,7 @@ class MyPortfolioDailyAllCard extends HTMLElement {
           flex-shrink: 0;
         }
         .info { flex: 1; min-width: 0; }
-        .name-row {
-          display: flex;
-          align-items: baseline;
-          gap: 0.5rem;
-        }
+        .name-row { display: flex; align-items: baseline; gap: 0.5rem; }
         .name {
           font-size: 1.05rem;
           font-weight: 600;
@@ -354,8 +363,13 @@ class MyPortfolioDailyAllCard extends HTMLElement {
       </ha-card>`;
   }
 
-  getCardSize() { return Math.max(4, Math.ceil((this._getStocks()?.length || 0) * 0.65) + 3); }
-  static getStubConfig() { return { title: "Tagesperformance", sort: "pct", order: "desc" }; }
+  getCardSize() {
+    return Math.max(4, Math.ceil((this._getStocks()?.length || 0) * 0.65) + 3);
+  }
+
+  static getStubConfig() {
+    return { title: "Tagesperformance", sort: "pct", order: "desc" };
+  }
 }
 
 customElements.define("my-portfolio-daily-all-card", MyPortfolioDailyAllCard);
