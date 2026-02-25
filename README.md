@@ -98,7 +98,6 @@ automation:
           {{ state_attr('sensor.mein_portfolio_PORTFOLIONAME_AKTIEN_KUERZEL', 'kuerzel') }} hat das obere Limit
           ({{ state_attr('sensor.mein_portfolio_PORTFOLIONAME_AKTIEN_KUERZEL', 'limitoben') }}) überschritten.
           Aktueller Kurs: {{ states('sensor.mein_portfolio_PORTFOLIONAME_AKTIEN_KUERZEL') }}
-```
 
 ---
 
@@ -171,6 +170,7 @@ Bei den letzten beiden Cards 4. und 5. lassen sich auch in Lovelace die Sortieru
 
 ---
 
+## Lovelace-Dashboard
 ## Hinweise
 
 - Yahoo Finance kann gelegentlich das Scraping-Format ändern – bei leeren Kursen bitte ein Issue erstellen.
