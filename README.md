@@ -129,13 +129,18 @@ hours_to_show: 48
 
 
 **Custom Cards**
+
 Mit der Integration werden 5 (bald 7) Custom Cards mitgeliefert. Für die Nutzung der Cards müssen diese aus dem Archiverzeichnis "/www" in das Verzeichnis "/config/www" in Home Assistant kopiert werden.
 Dann unter **Einstellungen → Dashboards** oben rechts die drei Punkte anklicken, dann auf Resourcen klicken und im folgenden Dialog jeweils die einzelnen js Dateien angeben:
 
 /local/my-portfolio-daily-all-card.js Typ: JavaScript-Modul
+
 /local/my-portfolio-daily-topflop-card.js Typ: JavaScript-Modul
+
 /local/my-portfolio-overview-card.js Typ: JavaScript-Modul
+
 /local/my-portfolio-topflop-card.js Typ: JavaScript-Modul
+
 /local/my-portfolio-total-performance-card.js Typ: Javascript-Modul
 
 Wenn beim Update der Integration bei neuen Versionen der Cards die alten cards angezeigt werden kann es manchmal helfen die Resource zu löschen, Home Assistant neu zu starten und dann wieder hinzuzufügen. Ich habe da manchmal Probleme mit dem Home Assistant Cache gehabt.
@@ -144,36 +149,35 @@ Wenn beim Update der Integration bei neuen Versionen der Cards die alten cards a
 ```yaml
 type: custom:my-portfolio-overview-card (Summe Invest, Summe Wert, Wertsteigerung in %)
 title: Meine Portfolios
-
+```
 2. Tages Beste und Schlechteste Aktien
 ```yaml
 type: custom:my-portfolio-daily-topflop-card
 title: Tages Top & Flop
 max_items: 3
-
+```
 3. Gesamt Beste und Schlechteste Aktien
 ```yaml
 type: custom:my-portfolio-topflop-card
 title: Top & Flop Aktien
 max_items: 3
-
+```
 4. Tages Performance alle Aktien - Sortierbar nach Prozent, Betrag und Aplhabetisch
 ```yaml
 type: custom:my-portfolio-daily-all-card
 sort: pct
 order: desc
-
+```
 5. Gesamt Performance alle Aktien - Sortierbar nach Prozent, Betrag und Aplhabetisch
 ```yaml
 type: custom:my-portfolio-total-performance-card
 sort: eur
 order: desc
-
+```
 Bei den letzten beiden Cards 4. und 5. lassen sich auch in Lovelace die Sortierungsoptionen im Browser umschalten, dazu dienen kleine Buttons über der Liste.
 
 ---
 
-## Lovelace-Dashboard
 ## Hinweise
 
 - Yahoo Finance kann gelegentlich das Scraping-Format ändern – bei leeren Kursen bitte ein Issue erstellen.
