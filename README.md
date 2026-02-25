@@ -98,6 +98,7 @@ automation:
           {{ state_attr('sensor.mein_portfolio_PORTFOLIONAME_AKTIEN_KUERZEL', 'kuerzel') }} hat das obere Limit
           ({{ state_attr('sensor.mein_portfolio_PORTFOLIONAME_AKTIEN_KUERZEL', 'limitoben') }}) überschritten.
           Aktueller Kurs: {{ states('sensor.mein_portfolio_PORTFOLIONAME_AKTIEN_KUERZEL') }}
+```
 
 ---
 
@@ -115,6 +116,7 @@ entities:
     name: SAP SE
   - entity: sensor.mein_portfolio_PORTFOLIONAME_AKTIE3_KUERZEL
     name: Bitcoin
+```
 
 **Oder als History-Graph:**
 ```yaml
@@ -123,7 +125,8 @@ title: Kursverlauf
 entities:
   - entity: sensor.mein_portfolio_PORTFOLIONAME_AKTIE1_KUERZEL
 hours_to_show: 48
-`
+```
+
 
 **Custom Cards**
 Mit der Integration werden 5 (bald 7) Custom Cards mitgeliefert. Für die Nutzung der Cards müssen diese aus dem Archiverzeichnis "/www" in das Verzeichnis "/config/www" in Home Assistant kopiert werden.
