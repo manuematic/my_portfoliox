@@ -3,7 +3,9 @@
 [![hacs_badge](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/hacs/integration)
 [![GitHub release](https://img.shields.io/github/release/manuematic/my_portfolio.svg)](https://github.com/manuematic/my_portfolio/releases)
 
-Eine Home Assistant Integration zum Verwalten und Überwachen von Aktienportfolios mit Live-Kursen von Yahoo Finance.
+Eine Home Assistant Integration zum Verwalten und Überwachen von Aktienportfolios mit Live-Kursen von Yahoo Finance. Irgendwie hat mir bisher keine Finanz-/Portfolioverwaltung gefallen also habe ich meine eigene geschrieben. Ich hoffe sie leistet euch gute Dienste und steigende Kurse ;-)
+
+Ich fände es nett wenn ihr in GitHub unter "Issues" in dem Issue "User" kurz schreibt wenn ihr das nutzt. Müsst ihr nicht aber fände ich spannend.
 
 ---
 
@@ -40,53 +42,21 @@ Eine Home Assistant Integration zum Verwalten und Überwachen von Aktienportfoli
 Die **Config Entry ID** findest du unter:  
 `Einstellungen → Integrationen → Mein Portfolio → ⋮ → Informationen`
 
----
+## Erstellen eines Portfolios
+1. **Einstellungen → Integrationen → Mein Portfolio**
+2. Dann auf "Eintrag hinzufügen" klicken und dem Portfolio einen Namen geben. Kursquelle immer "Yahoo Finance"
 
-## Aktien verwalten
+## Hinzufügen einer Aktie
+1. **Einstellungen → Integrationen → Mein Portfolio**
+2. Dann auf das Zahnrad in Portfoliozeile klicken
+3. Unten kann man dann Aktien hinzufügen, bearbeiten, löschen oder die Portfolioeinstellungen verwalten.
+4. Für eine Aktie müssen mindestens der Name, das Yahoo Kürzel, der Kaufpreis und Stückzahl angegeben werden.
 
-### Aktie hinzufügen
-
-Über **Entwicklerwerkzeuge → Services → `my_portfolio.add_stock`**:
-
-```yaml
-service: my_portfolio.add_stock
-data:
-  entry_id: "abc123def456"   # Deine Portfolio-ID
-  kuerzel: "AAPL"
-  preis: 182.500             # Kaufpreis pro Stück
-  stueckzahl: 10
-  kaufdatum: "2024-01-15"
-  limitoben: 200.000         # optional: Alarm wenn Kurs > 200
-  limitunten: 160.000        # optional: Alarm wenn Kurs < 160
-```
-
-**Beispiele für Kürzel:**
-| Aktie | Kürzel |
-|---|---|
-| Apple | `AAPL` |
-| SAP (Xetra) | `SAP.DE` |
-| Bitcoin | `BTC-USD` |
-| DAX ETF | `EXS1.DE` |
-
-### Aktie aktualisieren
-
-```yaml
-service: my_portfolio.update_stock
-data:
-  entry_id: "abc123def456"
-  stock_id: "550e8400-e29b-41d4-a716-446655440000"  # aus Entity-Attributen
-  stueckzahl: 15
-  limitoben: 220.000
-```
-
-### Aktie entfernen
-
-```yaml
-service: my_portfolio.remove_stock
-data:
-  entry_id: "abc123def456"
-  stock_id: "550e8400-e29b-41d4-a716-446655440000"
-```
+## Bearbeiten/Löschen einer Aktie
+1. **Einstellungen → Integrationen → Mein Portfolio**
+2. Dann auf das Zahnrad in Portfoliozeile klicken
+3. Unten dann Aktie bearbeiten/löschen auswählen.
+4. In der nächsten Box dann die Aktie auswählen und ganz unten bearbiten oder löschen auswählen.
 
 ---
 
@@ -117,7 +87,7 @@ automation:
   alias: "Portfolio Alarm – Apple überschreitet 200€"
   trigger:
     - platform: state
-      entity_id: sensor.aapl
+      entity_id: sensor.mein_portfolio_PORTFOLIONAME_AKTIE1_KUERZEL
       attribute: alarmoben
       to: true
   action:
@@ -125,36 +95,79 @@ automation:
       data:
         title: "📈 Kurs-Alarm!"
         message: >
-          {{ state_attr('sensor.aapl', 'kuerzel') }} hat das obere Limit
-          ({{ state_attr('sensor.aapl', 'limitoben') }}) überschritten.
-          Aktueller Kurs: {{ states('sensor.aapl') }}
+          {{ state_attr('sensor.mein_portfolio_PORTFOLIONAME_AKTIEN_KUERZEL', 'kuerzel') }} hat das obere Limit
+          ({{ state_attr('sensor.mein_portfolio_PORTFOLIONAME_AKTIEN_KUERZEL', 'limitoben') }}) überschritten.
+          Aktueller Kurs: {{ states('sensor.mein_portfolio_PORTFOLIONAME_AKTIEN_KUERZEL') }}
 ```
 
 ---
 
-## Lovelace-Dashboard Beispiel
+## Lovelace-Dashboard
 
+**Allgemein**
 ```yaml
 type: entities
 title: 📈 Mein Portfolio
 entities:
-  - entity: sensor.aapl
+  - entity: sensor.mein_portfolio_PORTFOLIONAME_AKTIE1_KUERZEL
     name: Apple Inc.
     icon: mdi:apple
-  - entity: sensor.sap_de
+  - entity: sensor.mein_portfolio_PORTFOLIONAME_AKTIE2_KUERZEL
     name: SAP SE
-  - entity: sensor.btc_usd
+  - entity: sensor.mein_portfolio_PORTFOLIONAME_AKTIE3_KUERZEL
     name: Bitcoin
-```
 
 **Oder als History-Graph:**
 ```yaml
 type: history-graph
 title: Kursverlauf
 entities:
-  - entity: sensor.aapl
+  - entity: sensor.mein_portfolio_PORTFOLIONAME_AKTIE1_KUERZEL
 hours_to_show: 48
-```
+`
+
+**Custom Cards**
+Mit der Integration werden 5 (bald 7) Custom Cards mitgeliefert. Für die Nutzung der Cards müssen diese aus dem Archiverzeichnis "/www" in das Verzeichnis "/config/www" in Home Assistant kopiert werden.
+Dann unter **Einstellungen → Dashboards** oben rechts die drei Punkte anklicken, dann auf Resourcen klicken und im folgenden Dialog jeweils die einzelnen js Dateien angeben:
+
+/local/my-portfolio-daily-all-card.js Typ: JavaScript-Modul
+/local/my-portfolio-daily-topflop-card.js Typ: JavaScript-Modul
+/local/my-portfolio-overview-card.js Typ: JavaScript-Modul
+/local/my-portfolio-topflop-card.js Typ: JavaScript-Modul
+/local/my-portfolio-total-performance-card.js Typ: Javascript-Modul
+
+Wenn beim Update der Integration bei neuen Versionen der Cards die alten cards angezeigt werden kann es manchmal helfen die Resource zu löschen, Home Assistant neu zu starten und dann wieder hinzuzufügen. Ich habe da manchmal Probleme mit dem Home Assistant Cache gehabt.
+
+1. Portfolio Zusammenfassung (
+```yaml
+type: custom:my-portfolio-overview-card (Summe Invest, Summe Wert, Wertsteigerung in %)
+title: Meine Portfolios
+
+2. Tages Beste und Schlechteste Aktien
+```yaml
+type: custom:my-portfolio-daily-topflop-card
+title: Tages Top & Flop
+max_items: 3
+
+3. Gesamt Beste und Schlechteste Aktien
+```yaml
+type: custom:my-portfolio-topflop-card
+title: Top & Flop Aktien
+max_items: 3
+
+4. Tages Performance alle Aktien - Sortierbar nach Prozent, Betrag und Aplhabetisch
+```yaml
+type: custom:my-portfolio-daily-all-card
+sort: pct
+order: desc
+
+5. Gesamt Performance alle Aktien - Sortierbar nach Prozent, Betrag und Aplhabetisch
+```yaml
+type: custom:my-portfolio-total-performance-card
+sort: eur
+order: desc
+
+Bei den letzten beiden Cards 4. und 5. lassen sich auch in Lovelace die Sortierungsoptionen im Browser umschalten, dazu dienen kleine Buttons über der Liste.
 
 ---
 
@@ -168,4 +181,4 @@ hours_to_show: 48
 
 ## Lizenz
 
-MIT License
+GNU GPL V2
