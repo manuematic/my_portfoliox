@@ -143,6 +143,10 @@ Dann unter **Einstellungen → Dashboards** oben rechts die drei Punkte anklicke
 
 /local/my-portfolio-total-performance-card.js Typ: Javascript-Modul
 
+/local/my-portfolio-alerts-card.js Typ: Javascript-Modul
+
+/local/my-portfolio-watchlist-card.js Typ: Javascript-Modul
+
 Wenn beim Update der Integration bei neuen Versionen der Cards die alten cards angezeigt werden kann es manchmal helfen die Resource zu löschen, Home Assistant neu zu starten und dann wieder hinzuzufügen. Ich habe da manchmal Probleme mit dem Home Assistant Cache gehabt.
 
 1. Portfolio Zusammenfassung (
@@ -174,7 +178,23 @@ type: custom:my-portfolio-total-performance-card
 sort: eur
 order: desc
 ```
-Bei den letzten beiden Cards 4. und 5. lassen sich auch in Lovelace die Sortierungsoptionen im Browser umschalten, dazu dienen kleine Buttons über der Liste.
+
+6. Nur Aktien mit aktiven Alarmen - Über-/Unterschrittene Limits
+```yaml
+type: custom:my-portfolio-alerts-card
+title: Limit-Alarme
+```
+
+7. Alle Aktien mit Statuskreis - Limitstatus
+```yaml
+type: custom:my-portfolio-watchlist-card
+title: Watchlist
+sort: alpha    # alpha | pct | kurs
+order: asc     # asc | desc
+```
+
+Bei den beiden Cards 4., 5. und 7. lassen sich auch in Lovelace die Sortierungsoptionen im Browser umschalten, dazu dienen kleine Buttons über der Liste.
+
 
 ---
 
