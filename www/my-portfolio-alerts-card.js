@@ -26,8 +26,8 @@ class MyPortfolioAlertsCard extends HTMLElement {
       if (!entityId.startsWith("sensor.")) continue;
       const attr = state.attributes || {};
       if (attr.kuerzel === undefined || attr.summary_key !== undefined) continue;
-      const oben   = attr.alarm_oben  === true;
-      const unten  = attr.alarm_unten === true;
+      const oben   = attr.alarmoben  === true;
+      const unten  = attr.alarmunten === true;
       if (!oben && !unten) continue;
       const kurs   = parseFloat(state.state);
       const preis  = parseFloat(attr.preis);
@@ -39,16 +39,16 @@ class MyPortfolioAlertsCard extends HTMLElement {
         kurs:        isNaN(kurs)   ? null : kurs,
         preis:       isNaN(preis)  ? null : preis,
         gewinn:      isNaN(gewinn) ? null : gewinn,
-        limit_oben:  parseFloat(attr.limit_oben)  || null,
-        limit_unten: parseFloat(attr.limit_unten) || null,
-        alarm_oben:  oben,
-        alarm_unten: unten,
+        limitoben:  parseFloat(attr.limitoben)  || null,
+        limitunten: parseFloat(attr.limitunten) || null,
+        alarmoben:  oben,
+        alarmunten: unten,
       });
     }
     // Erst oben-Alarme, dann unten-Alarme, alphabetisch
     return alerts.sort((a, b) => {
-      if (a.alarm_oben && !b.alarm_oben) return -1;
-      if (!a.alarm_oben && b.alarm_oben) return 1;
+      if (a.alarmoben && !b.alarmoben) return -1;
+      if (!a.alarmoben && b.alarmoben) return 1;
       return a.bezeichnung.localeCompare(b.bezeichnung, "de");
     });
   }
@@ -65,12 +65,12 @@ class MyPortfolioAlertsCard extends HTMLElement {
     const sign = v => (v !== null && !isNaN(v) && v >= 0) ? "+" : "";
 
     const renderAlert = (s, idx) => {
-      const isOben = s.alarm_oben;
+      const isOben = s.alarmoben;
       const clr    = isOben ? "#22c55e" : "#ef4444";
       const pulse  = isOben ? "pulse-green" : "pulse-red";
       const icon   = isOben ? "▲" : "▼";
       const label  = isOben ? "LIMIT OBEN" : "LIMIT UNTEN";
-      const limit  = isOben ? s.limit_oben : s.limit_unten;
+      const limit  = isOben ? s.limitoben : s.limitunten;
       const diff   = (s.kurs !== null && limit !== null) ? s.kurs - limit : null;
 
       return `

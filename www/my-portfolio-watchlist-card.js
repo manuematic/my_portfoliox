@@ -52,10 +52,10 @@ class MyPortfolioWatchlistCard extends HTMLElement {
         kurs:        isNaN(kurs)   ? null : kurs,
         preis:       isNaN(preis)  ? null : preis,
         gewinn:      isNaN(gewinn) ? null : gewinn,
-        limit_oben:  parseFloat(attr.limit_oben)  || 0,
-        limit_unten: parseFloat(attr.limit_unten) || 0,
-        alarm_oben:  attr.alarm_oben  === true,
-        alarm_unten: attr.alarm_unten === true,
+        limitoben:  parseFloat(attr.limitoben)  || 0,
+        limitunten: parseFloat(attr.limitunten) || 0,
+        alarmoben:  attr.alarmoben  === true,
+        alarmunten: attr.alarmunten === true,
         stueckzahl:  parseFloat(attr.stueckzahl) || 0,
       });
     }
@@ -97,24 +97,24 @@ class MyPortfolioWatchlistCard extends HTMLElement {
     const btn   = (f) => `sort-btn${this._sortBy === f ? " active" : ""}`;
 
     // Statuszähler für Header-Badge
-    const nOben  = stocks.filter(s => s.alarm_oben).length;
-    const nUnten = stocks.filter(s => s.alarm_unten).length;
+    const nOben  = stocks.filter(s => s.alarmoben).length;
+    const nUnten = stocks.filter(s => s.alarmunten).length;
     const nOk    = stocks.length - nOben - nUnten;
 
     // SVG-Kreis: leer = grau, grün = oben, rot = unten
     const statusDot = (s) => {
-      if (s.alarm_oben)  return `<svg viewBox="0 0 20 20" class="dot-svg">
+      if (s.alarmoben)  return `<svg viewBox="0 0 20 20" class="dot-svg">
         <circle cx="10" cy="10" r="8" fill="none" stroke="#22c55e" stroke-width="2.5"/>
         <circle cx="10" cy="10" r="4.5" fill="#22c55e"/>
         <text x="10" y="14" text-anchor="middle" font-size="8" fill="#fff" font-weight="700">▲</text>
       </svg>`;
-      if (s.alarm_unten) return `<svg viewBox="0 0 20 20" class="dot-svg">
+      if (s.alarmunten) return `<svg viewBox="0 0 20 20" class="dot-svg">
         <circle cx="10" cy="10" r="8" fill="none" stroke="#ef4444" stroke-width="2.5"/>
         <circle cx="10" cy="10" r="4.5" fill="#ef4444"/>
         <text x="10" y="14" text-anchor="middle" font-size="8" fill="#fff" font-weight="700">▼</text>
       </svg>`;
       // Kein Alarm – leerer Ring
-      const hasLimit = (s.limit_oben > 0 || s.limit_unten > 0);
+      const hasLimit = (s.limitoben > 0 || s.limitunten > 0);
       const stroke   = hasLimit ? "rgba(255,255,255,0.25)" : "rgba(255,255,255,0.1)";
       return `<svg viewBox="0 0 20 20" class="dot-svg">
         <circle cx="10" cy="10" r="8" fill="none" stroke="${stroke}" stroke-width="2"/>
@@ -123,17 +123,17 @@ class MyPortfolioWatchlistCard extends HTMLElement {
 
     // Limit-Balken: zeigt wie nah der Kurs am Limit ist (0–100%)
     const limitBar = (s) => {
-      if (!s.kurs || (!s.limit_oben && !s.limit_unten)) return "";
+      if (!s.kurs || (!s.limitoben && !s.limitunten)) return "";
       const parts = [];
-      if (s.limit_unten > 0) {
-        const dist = s.kurs > 0 ? Math.min(((s.kurs - s.limit_unten) / s.kurs) * 100, 100) : 0;
-        const clr  = s.alarm_unten ? "#ef4444" : dist < 5 ? "#f97316" : "rgba(239,68,68,.3)";
-        parts.push(`<div class="limit-seg" title="Limit ↓ ${fmt(s.limit_unten,3)} €" style="background:${clr};width:${Math.max(3,dist)}%"></div>`);
+      if (s.limitunten > 0) {
+        const dist = s.kurs > 0 ? Math.min(((s.kurs - s.limitunten) / s.kurs) * 100, 100) : 0;
+        const clr  = s.alarmunten ? "#ef4444" : dist < 5 ? "#f97316" : "rgba(239,68,68,.3)";
+        parts.push(`<div class="limit-seg" title="Limit ↓ ${fmt(s.limitunten,3)} €" style="background:${clr};width:${Math.max(3,dist)}%"></div>`);
       }
-      if (s.limit_oben > 0) {
-        const dist = s.limit_oben > 0 ? Math.min(((s.limit_oben - s.kurs) / s.limit_oben) * 100, 100) : 0;
-        const clr  = s.alarm_oben ? "#22c55e" : dist < 5 ? "#86efac" : "rgba(34,197,94,.3)";
-        parts.push(`<div class="limit-seg" title="Limit ↑ ${fmt(s.limit_oben,3)} €" style="background:${clr};width:${Math.max(3,dist)}%"></div>`);
+      if (s.limitoben > 0) {
+        const dist = s.limitoben > 0 ? Math.min(((s.limitoben - s.kurs) / s.limitoben) * 100, 100) : 0;
+        const clr  = s.alarmoben ? "#22c55e" : dist < 5 ? "#86efac" : "rgba(34,197,94,.3)";
+        parts.push(`<div class="limit-seg" title="Limit ↑ ${fmt(s.limitoben,3)} €" style="background:${clr};width:${Math.max(3,dist)}%"></div>`);
       }
       return `<div class="limit-bar">${parts.join("")}</div>`;
     };
@@ -142,7 +142,7 @@ class MyPortfolioWatchlistCard extends HTMLElement {
       const gwClr = s.gewinn >= 0 ? "#22c55e" : "#ef4444";
       return `
         <div class="row" style="animation-delay:${i * 0.03}s">
-          <div class="dot-wrap ${s.alarm_oben ? "anim-green" : s.alarm_unten ? "anim-red" : ""}">
+          <div class="dot-wrap ${s.alarmoben ? "anim-green" : s.alarmunten ? "anim-red" : ""}">
             ${statusDot(s)}
           </div>
           <div class="info">
@@ -151,12 +151,12 @@ class MyPortfolioWatchlistCard extends HTMLElement {
               <span class="ticker">${s.kuerzel}</span>
             </div>
             <div class="limits-row">
-              ${s.limit_unten > 0
-                ? `<span class="lim lim-down ${s.alarm_unten ? "active" : ""}">↓ ${fmt(s.limit_unten, 3)}</span>`
+              ${s.limitunten > 0
+                ? `<span class="lim lim-down ${s.alarmunten ? "active" : ""}">↓ ${fmt(s.limitunten, 3)}</span>`
                 : `<span class="lim lim-none">–</span>`}
               ${limitBar(s)}
-              ${s.limit_oben > 0
-                ? `<span class="lim lim-up ${s.alarm_oben ? "active" : ""}">↑ ${fmt(s.limit_oben, 3)}</span>`
+              ${s.limitoben > 0
+                ? `<span class="lim lim-up ${s.alarmoben ? "active" : ""}">↑ ${fmt(s.limitoben, 3)}</span>`
                 : `<span class="lim lim-none">–</span>`}
             </div>
           </div>
