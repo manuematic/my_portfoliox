@@ -195,7 +195,6 @@ order: asc     # asc | desc
 
 Bei den beiden Cards 4., 5. und 7. lassen sich auch in Lovelace die Sortierungsoptionen im Browser umschalten, dazu dienen kleine Buttons über der Liste.
 
-
 ---
 
 ## Hinweise
