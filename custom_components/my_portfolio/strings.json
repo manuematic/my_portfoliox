@@ -2,86 +2,87 @@
   "config": {
     "step": {
       "user": {
-        "title": "Create Portfolio",
-        "description": "Give your portfolio a name, choose a data source and update interval.",
+        "title": "Portfolio erstellen",
+        "description": "Gib deinem Portfolio einen Namen, wähle die Kursquelle und das Aktualisierungsintervall.",
         "data": {
-          "portfolio_name": "Portfolio Name",
-          "data_source": "Price Source",
-          "scan_interval": "Update Interval"
+          "portfolio_name": "Portfolio-Name",
+          "data_source": "Kursquelle",
+          "scan_interval": "Aktualisierungsintervall"
         }
       }
     },
     "abort": {
-      "already_configured": "A portfolio with this name already exists."
+      "already_configured": "Ein Portfolio mit diesem Namen existiert bereits."
     },
     "error": {
-      "invalid_name": "Please enter a valid portfolio name."
+      "invalid_name": "Bitte gib einen gültigen Portfolio-Namen ein."
     }
   },
   "options": {
     "step": {
       "init": {
-        "title": "Manage Portfolio",
-        "description": "Stocks in portfolio:\n{overview}",
+        "title": "Portfolio verwalten",
+        "description": "Aktien im Portfolio:\n{overview}",
         "data": {
-          "action": "Choose action"
+          "action": "Aktion wählen"
         }
       },
       "add_stock": {
-        "title": "Add New Stock",
+        "title": "Neue Aktie hinzufügen",
         "data": {
-          "bezeichnung": "Name (e.g. BASF SE, Apple Inc.)",
+          "bezeichnung": "Bezeichnung (z.B. BASF SE, Apple Inc.)",
           "wkn": "WKN (optional)",
           "isin": "ISIN (optional)",
-          "kuerzel": "Ticker Symbol (e.g. AAPL, BAS.DE)",
-          "preis": "Purchase Price per Share",
-          "stueckzahl": "Number of Shares (e.g. 10 or 2.50)",
-          "kaufdatum": "Purchase Date",
-          "limitoben": "Upper Limit (alarm when exceeded, 0 = no limit)",
-          "limitunten": "Lower Limit (alarm when undercut, 0 = no limit)",
-          "kursquelle_url": "Price Page URL (e.g. https://www.finanzen.net/aktien/basf-aktie)"
+          "kuerzel": "Börsenkürzel (z.B. AAPL, BAS.DE)",
+          "preis": "Kaufpreis pro Stück",
+          "stueckzahl": "Stückzahl (z.B. 10 oder 2.50)",
+          "kaufdatum": "Kaufdatum",
+          "limitoben": "Limit Oben (Alarm bei Überschreitung, 0 = kein Limit)",
+          "limitunten": "Limit Unten (Alarm bei Unterschreitung, 0 = kein Limit)",
+          "kursquelle_url": "Kursseiten-URL (z.B. https://www.finanzen.net/aktien/basf-aktie)"
         }
       },
       "select_stock": {
-        "title": "Select Stock",
-        "description": "Select the stock you want to edit or delete.",
+        "title": "Aktie wählen",
+        "description": "Wähle die Aktie die du bearbeiten oder löschen möchtest.",
         "data": {
-          "stock_id": "Stock",
-          "action": "Action"
+          "stock_id": "Aktie",
+          "action": "Aktion"
         }
       },
       "edit_stock": {
-        "title": "Edit Stock: {kuerzel}",
+        "title": "Aktie bearbeiten: {kuerzel}",
         "data": {
-          "bezeichnung": "Name",
+          "bezeichnung": "Bezeichnung",
           "wkn": "WKN",
           "isin": "ISIN",
-          "kuerzel": "Ticker Symbol",
-          "preis": "Purchase Price per Share",
-          "stueckzahl": "Number of Shares (e.g. 10 or 2.50)",
-          "kaufdatum": "Purchase Date",
-          "limitoben": "Upper Limit",
-          "limitunten": "Lower Limit",
-          "kursquelle_url": "Price Page URL"
+          "kuerzel": "Börsenkürzel",
+          "preis": "Kaufpreis pro Stück",
+          "stueckzahl": "Stückzahl (z.B. 10 oder 2.50)",
+          "kaufdatum": "Kaufdatum",
+          "limitoben": "Limit Oben",
+          "limitunten": "Limit Unten",
+          "kursquelle_url": "Kursseiten-URL"
         }
       },
       "confirm_delete": {
-        "title": "Delete Stock",
-        "description": "Are you sure you want to remove \"{kuerzel}\" from your portfolio?",
+        "title": "Aktie löschen",
+        "description": "Möchtest du die Aktie \"{kuerzel}\" wirklich aus dem Portfolio entfernen?",
         "data": {
-          "confirm": "Yes, delete stock"
+          "confirm": "Ja, Aktie löschen"
         }
       },
       "settings": {
-        "title": "Settings",
+        "title": "Einstellungen",
         "data": {
-          "data_source": "Price Source",
-          "scan_interval": "Update Interval (minutes)"
+          "data_source": "Kursquelle",
+          "scan_interval": "Aktualisierungsintervall (Minuten)",
+          "fmp_api_key": "FMP API-Key (optional, für Analysten-Kursziele)"
         }
       }
     },
     "error": {
-      "invalid_kuerzel": "Please enter a valid ticker symbol."
+      "invalid_kuerzel": "Bitte gib ein gültiges Börsenkürzel ein."
     }
   }
 }

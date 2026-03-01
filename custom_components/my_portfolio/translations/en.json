@@ -76,7 +76,8 @@
         "title": "Settings",
         "data": {
           "data_source": "Price Source",
-          "scan_interval": "Update Interval (minutes)"
+          "scan_interval": "Update Interval (minutes)",
+          "fmp_api_key": "FMP API Key (optional, for analyst price targets)"
         }
       }
     },

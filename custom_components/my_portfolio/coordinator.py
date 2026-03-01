@@ -12,6 +12,7 @@ from homeassistant.helpers.storage import Store
 
 from .const import (
     DOMAIN,
+    CONF_FMP_API_KEY,
     STORAGE_KEY,
     STORAGE_VERSION,
     DEFAULT_SCAN_INTERVAL,
@@ -35,6 +36,12 @@ from .const import (
     ATTR_KURS_VORTAG,
     ATTR_TAGES_ABS,
     ATTR_TAGES_PCT,
+    ATTR_KZ_HOCH,
+    ATTR_KZ_TIEF,
+    ATTR_KZ_MITTEL,
+    ATTR_KZ_ANZAHL,
+    ATTR_KZ_KONSENS,
+    ATTR_KZ_DATUM,
     ATTR_AKTUELLER_KURS,
     ATTR_KURSQUELLE_URL,
     ATTR_GESAMT_INVEST,
@@ -239,3 +246,32 @@ class MyPortfolioCoordinator(DataUpdateCoordinator):
     async def async_shutdown(self) -> None:
         if self._session and not self._session.closed:
             await self._session.close()
+
+    async def _update_analyst_data(self, api_key: str) -> None:
+        """Ruft FMP-Analystendaten ab – maximal einmal alle 24h pro Symbol."""
+        from datetime import datetime, timedelta
+        if not hasattr(self, "_analyst_cache"):
+            self._analyst_cache: dict = {}
+        cutoff = datetime.now() - timedelta(hours=24)
+        for stock_id, stock in self._stock_data.items():
+            kuerzel = stock.get("kuerzel", "")
+            if not kuerzel:
+                continue
+            cached = self._analyst_cache.get(kuerzel)
+            if cached and cached.get("_fetched_at") and                cached["_fetched_at"] > cutoff:
+                analyst = cached
+            else:
+                try:
+                    analyst = await fetch_analyst_data(self.session, kuerzel, api_key)
+                    analyst["_fetched_at"] = datetime.now()
+                    self._analyst_cache[kuerzel] = analyst
+                except Exception as exc:
+                    _LOGGER.debug("FMP error für %s: %s", kuerzel, exc)
+                    continue
+            stock[ATTR_KZ_HOCH]    = analyst.get("kursziel_hoch")
+            stock[ATTR_KZ_TIEF]    = analyst.get("kursziel_tief")
+            stock[ATTR_KZ_MITTEL]  = analyst.get("kursziel_mittel")
+            stock[ATTR_KZ_ANZAHL]  = analyst.get("analysten_anzahl")
+            stock[ATTR_KZ_KONSENS] = analyst.get("analysten_konsens")
+            stock[ATTR_KZ_DATUM]   = analyst.get("kursziel_datum")
+

@@ -65,3 +65,15 @@ HTTP_HEADERS = {
 
 # Platforms
 PLATFORMS = ["sensor"]
+
+# Financial Modeling Prep (FMP)
+CONF_FMP_API_KEY = "fmp_api_key"
+FMP_BASE_URL     = "https://financialmodelingprep.com/api/v3"
+
+# Analysten-Attribute
+ATTR_KZ_HOCH      = "kursziel_hoch"
+ATTR_KZ_TIEF      = "kursziel_tief"
+ATTR_KZ_MITTEL    = "kursziel_mittel"
+ATTR_KZ_ANZAHL    = "analysten_anzahl"
+ATTR_KZ_KONSENS   = "analysten_konsens"   # buy / hold / sell
+ATTR_KZ_DATUM     = "kursziel_datum"

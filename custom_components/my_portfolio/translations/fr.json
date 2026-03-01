@@ -76,7 +76,8 @@
         "title": "Paramètres",
         "data": {
           "data_source": "Source des cours",
-          "scan_interval": "Intervalle de mise à jour (minutes)"
+          "scan_interval": "Intervalle de mise à jour (minutes)",
+          "fmp_api_key": "Clé API FMP (optionnel, pour les objectifs analystes)"
         }
       }
     },

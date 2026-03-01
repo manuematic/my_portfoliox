@@ -13,6 +13,7 @@ from .const import (
     CONF_PORTFOLIO_NAME,
     CONF_SCAN_INTERVAL,
     CONF_DATA_SOURCE,
+    CONF_FMP_API_KEY,
     DEFAULT_SCAN_INTERVAL,
     DEFAULT_SOURCE,
     SOURCE_YAHOO,
@@ -94,6 +95,10 @@ def _current_options(config_entry) -> dict:
         CONF_DATA_SOURCE: config_entry.options.get(
             CONF_DATA_SOURCE,
             config_entry.data.get(CONF_DATA_SOURCE, DEFAULT_SOURCE),
+        ),
+        CONF_FMP_API_KEY: config_entry.options.get(
+            CONF_FMP_API_KEY,
+            config_entry.data.get(CONF_FMP_API_KEY, ""),
         ),
     }
 
@@ -347,6 +352,9 @@ class MyPortfolioOptionsFlow(config_entries.OptionsFlow):
                 vol.Required(CONF_SCAN_INTERVAL, default=opts[CONF_SCAN_INTERVAL]): selector.selector(
                     {"number": {"min": 1, "max": 1440, "step": 1, "mode": "box",
                                 "unit_of_measurement": "min"}}
+                ),
+                vol.Optional(CONF_FMP_API_KEY, default=opts.get(CONF_FMP_API_KEY, "")): selector.selector(
+                    {"text": {"type": "password"}}
                 ),
             }),
         )

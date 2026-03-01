@@ -76,7 +76,8 @@
         "title": "Einstellungen",
         "data": {
           "data_source": "Kursquelle",
-          "scan_interval": "Aktualisierungsintervall (Minuten)"
+          "scan_interval": "Aktualisierungsintervall (Minuten)",
+          "fmp_api_key": "FMP API-Key (optional, für Analysten-Kursziele)"
         }
       }
     },
