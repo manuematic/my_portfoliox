@@ -215,6 +215,14 @@ class MyPortfolioCoordinator(DataUpdateCoordinator):
             ATTR_PORTFOLIO_PROZENT:   portfolio_prozent,
         }
 
+        # FMP Analysten-Daten (einmal täglich, nur wenn API-Key gesetzt)
+        fmp_key = (
+            self.config_entry.options.get(CONF_FMP_API_KEY, "")
+            or self.config_entry.data.get(CONF_FMP_API_KEY, "")
+        )
+        if fmp_key and fmp_key.strip():
+            await self._update_analyst_data(fmp_key.strip())
+
         return updated_data
 
     # ── Portfolio-Verwaltung ───────────────────────────────────────────────

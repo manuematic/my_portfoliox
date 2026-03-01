@@ -294,19 +294,19 @@ class MyPortfolioChartCard extends HTMLElement {
          onclick="this.getRootNode().host._toggle('${id}')">${label}</button>`;
 
     // Chart-Inhalt
+    // Datenladen NUR anstoßen wenn Symbol sich geändert hat, nicht bei jedem hass-Update
     let chartContent;
-    if (this._loading) {
-      chartContent = `<div class="loading"><div class="spinner"></div><span>Kursdaten werden geladen…</span></div>`;
-    } else if (!this._prices || this._lastSymbol !== curSym) {
-      chartContent = `<div class="loading"><div class="spinner"></div><span>Lade ${curSym}…</span></div>`;
-      // Daten nachladen
-      if (this._lastSymbol !== curSym) {
-        this._lastSymbol = curSym;
-        this._prices     = null;
-        setTimeout(() => this._loadAndRender(), 0);
-      }
-    } else {
+    if (this._loadedSymbol !== curSym && !this._loading) {
+      this._loadedSymbol = curSym;
+      this._prices       = null;
+      setTimeout(() => this._loadAndRender(), 0);
+      chartContent = `<div class="loading"><div class="spinner"></div><span>Lade ${curSym}\u2026</span></div>`;
+    } else if (this._loading) {
+      chartContent = `<div class="loading"><div class="spinner"></div><span>Kursdaten werden geladen\u2026</span></div>`;
+    } else if (this._prices) {
       chartContent = this._drawChart(this._prices);
+    } else {
+      chartContent = `<div class="loading"><div class="spinner"></div><span>Lade ${curSym}\u2026</span></div>`;
     }
 
     // Legende
@@ -551,7 +551,7 @@ class MyPortfolioChartCard extends HTMLElement {
     const stocks = this._stocksForPortfolio(portfolio);
     if (stocks.length > 0) {
       this._set("symbol", stocks[0].kuerzel);
-      this._lastSymbol = null;
+      this._loadedSymbol = null;
       this._prices     = null;
     }
     this._render();
@@ -559,7 +559,7 @@ class MyPortfolioChartCard extends HTMLElement {
 
   _selectSymbol(symbol) {
     this._set("symbol", symbol);
-    this._lastSymbol = null;
+    this._loadedSymbol = null;
     this._prices     = null;
     this._render();
   }
