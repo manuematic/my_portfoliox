@@ -28,6 +28,7 @@ class MyPortfolioChartCard extends HTMLElement {
         sma100:    false,
         sma200:    false,
         trend:     false,
+        kursziel:  false,
       });
     }
   }
@@ -140,6 +141,9 @@ class MyPortfolioChartCard extends HTMLElement {
     const n       = prices.length;
 
     const closes  = prices.map(p => p.close);
+    const kzSensor = _getKursziel(this._hass, this._st.symbol);
+    const kzVal    = kzSensor ? parseFloat(kzSensor) : null;
+
     const allVals = [...closes];
 
     // Werte für Skalierung sammeln
@@ -150,6 +154,7 @@ class MyPortfolioChartCard extends HTMLElement {
     if (st.sma100) allVals.push(...sma100v.filter(v => v !== null));
     if (st.sma200) allVals.push(...sma200v.filter(v => v !== null));
     if (st.trend)  allVals.push(...trendv);
+    if (st.kursziel && kzVal) allVals.push(kzVal);
 
     const minV = Math.min(...allVals) * 0.998;
     const maxV = Math.max(...allVals) * 1.002;
@@ -189,6 +194,16 @@ class MyPortfolioChartCard extends HTMLElement {
         `${i === 0 ? "M" : "L"}${xOf(i).toFixed(1)},${yOf(v).toFixed(1)}`
       ).join(" ");
       return `<path d="${d}" fill="none" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="6,3" opacity="0.85"/>`;
+    };
+
+    const kursZielLine = () => {
+      if (!kzVal) return "";
+      const y = yOf(kzVal).toFixed(1);
+      const clr = kzVal > (closes[closes.length-1] || 0) ? "#22c55e" : "#ef4444";
+      return `<line x1="${padL}" y1="${y}" x2="${W - padR}" y2="${y}"
+                stroke="${clr}" stroke-width="1.5" stroke-dasharray="8,4" opacity="0.7"/>
+              <text x="${W - padR - 2}" y="${parseFloat(y) - 4}" text-anchor="end"
+                class="axis-lbl" fill="${clr}">KZ ${kzVal.toFixed(2)}</text>`;
     };
 
     // Y-Achse Labels (5 Stufen)
@@ -239,6 +254,7 @@ class MyPortfolioChartCard extends HTMLElement {
         ${st.sma100 ? smaPath(sma100v, "#60a5fa") : ""}
         ${st.sma200 ? smaPath(sma200v, "#a78bfa") : ""}
         ${st.trend  ? trendPath()                 : ""}
+        ${st.kursziel ? kursZielLine() : ""}
 
         <!-- Letzter Kurs Punkt + Label -->
         <circle cx="${lastPx}" cy="${lastPy}" r="4" fill="${lineClr}" stroke="#1c1c27" stroke-width="2"/>
@@ -300,6 +316,7 @@ class MyPortfolioChartCard extends HTMLElement {
         ${st.sma100 ? `<span class="leg-item"><span class="leg-dash" style="border-color:#60a5fa"></span>SMA 100</span>` : ""}
         ${st.sma200 ? `<span class="leg-item"><span class="leg-dash" style="border-color:#a78bfa"></span>SMA 200</span>` : ""}
         ${st.trend  ? `<span class="leg-item"><span class="leg-dash" style="border-color:#f59e0b"></span>Trend</span>` : ""}
+        ${st.kursziel ? `<span class="leg-item"><span class="leg-dash" style="border-color:#22c55e"></span>Ø Kursziel</span>` : ""}
       </div>`;
 
     this.shadowRoot.innerHTML = `
@@ -563,3 +580,16 @@ window.customCards.push({
   name:        "Portfolio Kursverlauf",
   description: "Grafischer Kursverlauf einer Aktie mit SMA 100/200 und Trendlinie.",
 });
+
+// Hilfsfunktion: Ø-Kursziel für ein Symbol aus HA-States
+function _getKursziel(hass, symbol) {
+  if (!hass || !symbol) return null;
+  for (const [, state] of Object.entries(hass.states)) {
+    const attr = state.attributes || {};
+    if (attr.kuerzel === symbol && attr.summary_key === undefined) {
+      const kz = parseFloat(attr.kursziel_mittel);
+      return isNaN(kz) ? null : kz;
+    }
+  }
+  return null;
+}
