@@ -18,8 +18,6 @@ from .const import (
     DEFAULT_SCAN_INTERVAL,
     DEFAULT_SOURCE,
     SOURCE_YAHOO,
-    SOURCE_FINANZEN_NET,
-    SOURCE_FINANZEN100,
     CONF_DATA_SOURCE,
     ATTR_BEZEICHNUNG,
     ATTR_KUERZEL,
@@ -43,14 +41,12 @@ from .const import (
     ATTR_KZ_KONSENS,
     ATTR_KZ_DATUM,
     ATTR_AKTUELLER_KURS,
-    ATTR_KURSQUELLE_URL,
     ATTR_GESAMT_INVEST,
     ATTR_GESAMT_WERT,
     ATTR_PORTFOLIO_DIFFERENZ,
     ATTR_PORTFOLIO_PROZENT,
 )
 from .yahoo_finance import fetch_price_yahoo
-from .scraper import fetch_price_finanzen_net, fetch_price_finanzen100
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -96,33 +92,8 @@ class MyPortfolioCoordinator(DataUpdateCoordinator):
         )
 
     async def _fetch_price(self, stock: dict) -> dict:
-        """Kurs für eine Aktie abhängig von der konfigurierten Quelle abrufen."""
-        source = self.data_source
-
-        if source == SOURCE_YAHOO:
-            return await fetch_price_yahoo(self._session, stock.get(ATTR_KUERZEL, ""))
-        # scraper-Quellen liefern nur float → in PriceData-Dict wrappen
-
-        # finanzen.net und finanzen100: URL aus Aktien-Stammdaten lesen
-        url = stock.get(ATTR_KURSQUELLE_URL, "").strip()
-        if not url:
-            _LOGGER.warning(
-                "Keine Kursquelle-URL für Aktie '%s' – bitte URL in der Aktie hinterlegen",
-                stock.get(ATTR_KUERZEL, "?"),
-            )
-            return None
-
-        if source == SOURCE_FINANZEN_NET:
-            p = await fetch_price_finanzen_net(self._session, url)
-        elif source == SOURCE_FINANZEN100:
-            p = await fetch_price_finanzen100(self._session, url)
-        else:
-            p = None
-        return {"aktueller_kurs": p, "kurs_vortag": None,
-                "tages_aenderung_abs": None, "tages_aenderung_pct": None}
-
-        _LOGGER.error("Unbekannte Datenquelle: %s", source)
-        return None
+        """Kurs für eine Aktie von Yahoo Finance abrufen."""
+        return await fetch_price_yahoo(self._session, stock.get(ATTR_KUERZEL, ""))
 
     async def _async_update_data(self) -> dict[str, dict]:
         """Aktuelle Kurse für alle Aktien abrufen und Felder berechnen."""
@@ -221,7 +192,7 @@ class MyPortfolioCoordinator(DataUpdateCoordinator):
             or self.config_entry.data.get(CONF_FMP_API_KEY, "")
         )
         if fmp_key and fmp_key.strip():
-            await self._update_analyst_data(fmp_key.strip())
+            await self._update_analyst_data(fmp_key.strip(), updated_data)
 
         return updated_data
 
@@ -255,13 +226,13 @@ class MyPortfolioCoordinator(DataUpdateCoordinator):
         if self._session and not self._session.closed:
             await self._session.close()
 
-    async def _update_analyst_data(self, api_key: str) -> None:
+    async def _update_analyst_data(self, api_key: str, stock_data: dict) -> None:
         """Ruft FMP-Analystendaten ab – maximal einmal alle 24h pro Symbol."""
         from datetime import datetime, timedelta
         if not hasattr(self, "_analyst_cache"):
             self._analyst_cache: dict = {}
         cutoff = datetime.now() - timedelta(hours=24)
-        for stock_id, stock in self._stock_data.items():
+        for stock_id, stock in stock_data.items():
             kuerzel = stock.get("kuerzel", "")
             if not kuerzel:
                 continue

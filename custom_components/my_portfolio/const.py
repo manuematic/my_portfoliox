@@ -15,8 +15,6 @@ DEFAULT_SCAN_INTERVAL = 15  # minutes
 
 # Data sources
 SOURCE_YAHOO = "yahoo_finance"
-SOURCE_FINANZEN_NET = "finanzen_net"
-SOURCE_FINANZEN100 = "finanzen100"
 DEFAULT_SOURCE = SOURCE_YAHOO
 
 # Stock attribute keys
@@ -37,7 +35,6 @@ ATTR_TAGES_ABS = "tages_aenderung_abs"
 ATTR_TAGES_PCT = "tages_aenderung_pct"
 ATTR_AKTUELLER_KURS = "aktueller_kurs"
 ATTR_PORTFOLIO_NAME = "portfolio_name"
-ATTR_KURSQUELLE_URL = "kursquelle_url"  # Benutzerdefinierte URL für finanzen.net / finanzen100
 
 # Portfolio-Gesamt-Sensoren
 ATTR_GESAMT_INVEST = "gesamtinvest"

@@ -17,8 +17,6 @@ from .const import (
     DEFAULT_SCAN_INTERVAL,
     DEFAULT_SOURCE,
     SOURCE_YAHOO,
-    SOURCE_FINANZEN_NET,
-    SOURCE_FINANZEN100,
     ATTR_BEZEICHNUNG,
     ATTR_WKN,
     ATTR_ISIN,
@@ -39,9 +37,7 @@ _LOGGER = logging.getLogger(__name__)
 
 def _source_label(source: str) -> str:
     return {
-        SOURCE_YAHOO:        "Yahoo Finance (empfohlen – Kürzel wie AAPL, BAS.DE)",
-        SOURCE_FINANZEN_NET: "finanzen.net (URL pro Aktie angeben)",
-        SOURCE_FINANZEN100:  "finanzen100.de (URL pro Aktie angeben)",
+        SOURCE_YAHOO: "Yahoo Finance (Kürzel wie AAPL, BAS.DE)",
     }.get(source, source)
 
 
@@ -77,8 +73,8 @@ def _stock_schema(defaults: dict | None = None, data_source: str = SOURCE_YAHOO)
         ),
     }
 
-    # URL-Feld nur bei finanzen.net / finanzen100
-    if data_source in (SOURCE_FINANZEN_NET, SOURCE_FINANZEN100):
+    # URL-Feld nicht mehr benötigt (nur Yahoo Finance unterstützt)
+    if False:
         schema_dict[vol.Optional(ATTR_KURSQUELLE_URL, default=d.get(ATTR_KURSQUELLE_URL, ""))] = (
             selector.selector({"text": {"type": "url"}})
         )
@@ -138,9 +134,7 @@ class MyPortfolioConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 vol.Required(CONF_DATA_SOURCE, default=DEFAULT_SOURCE): selector.selector({
                     "select": {
                         "options": [
-                            {"value": SOURCE_YAHOO,        "label": _source_label(SOURCE_YAHOO)},
-                            {"value": SOURCE_FINANZEN_NET, "label": _source_label(SOURCE_FINANZEN_NET)},
-                            {"value": SOURCE_FINANZEN100,  "label": _source_label(SOURCE_FINANZEN100)},
+                            {"value": SOURCE_YAHOO, "label": _source_label(SOURCE_YAHOO)},
                         ],
                         "mode": "list",
                     }
@@ -342,9 +336,7 @@ class MyPortfolioOptionsFlow(config_entries.OptionsFlow):
                 vol.Required(CONF_DATA_SOURCE, default=opts[CONF_DATA_SOURCE]): selector.selector({
                     "select": {
                         "options": [
-                            {"value": SOURCE_YAHOO,        "label": _source_label(SOURCE_YAHOO)},
-                            {"value": SOURCE_FINANZEN_NET, "label": _source_label(SOURCE_FINANZEN_NET)},
-                            {"value": SOURCE_FINANZEN100,  "label": _source_label(SOURCE_FINANZEN100)},
+                            {"value": SOURCE_YAHOO, "label": _source_label(SOURCE_YAHOO)},
                         ],
                         "mode": "list",
                     }
