@@ -28,7 +28,6 @@ from .const import (
     ATTR_KAUFDATUM,
     ATTR_LIMIT_OBEN,
     ATTR_LIMIT_UNTEN,
-    ATTR_KURSQUELLE_URL,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -73,11 +72,6 @@ def _stock_schema(defaults: dict | None = None, data_source: str = SOURCE_YAHOO)
         ),
     }
 
-    # URL-Feld nicht mehr benötigt (nur Yahoo Finance unterstützt)
-    if False:
-        schema_dict[vol.Optional(ATTR_KURSQUELLE_URL, default=d.get(ATTR_KURSQUELLE_URL, ""))] = (
-            selector.selector({"text": {"type": "url"}})
-        )
 
     return vol.Schema(schema_dict)
 
@@ -370,5 +364,4 @@ class MyPortfolioOptionsFlow(config_entries.OptionsFlow):
             ATTR_KAUFDATUM:      user_input[ATTR_KAUFDATUM],
             ATTR_LIMIT_OBEN:     round(float(limit_oben), 3) if limit_oben else None,
             ATTR_LIMIT_UNTEN:    round(float(limit_unten), 3) if limit_unten else None,
-            ATTR_KURSQUELLE_URL: str(user_input.get(ATTR_KURSQUELLE_URL, "")).strip(),
         }
