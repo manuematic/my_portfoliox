@@ -75,10 +75,52 @@ class MyPortfolioChartCard extends HTMLElement {
     return this._getStocks().filter(s => s.portfolio === portfolio);
   }
 
-  async _fetchHistory(symbol) {
-    const cached = this._cache[symbol];
+  async _fetchHistory(symbol, isin) {
+    const cacheKey = isin || symbol;
+    const cached = this._cache[cacheKey];
     if (cached && Date.now() - cached.ts < 5 * 60 * 1000) return cached.prices;
 
+    // ING als primäre Quelle wenn ISIN vorhanden (letztes Jahr via Tradegate)
+    if (isin) {
+      const prices = await this._fetchHistoryING(isin);
+      if (prices && prices.length > 10) {
+        this._cache[cacheKey] = { ts: Date.now(), prices };
+        return prices;
+      }
+      console.warn("ING Chart-Daten unvollständig, Fallback auf Yahoo:", symbol);
+    }
+
+    // Yahoo Finance Fallback
+    return await this._fetchHistoryYahoo(symbol, cacheKey);
+  }
+
+  async _fetchHistoryING(isin) {
+    // ING liefert nur 3 Monate pro Request → 4 Requests für 1 Jahr
+    const allPrices = [];
+    const now = new Date();
+    for (let i = 3; i >= 0; i--) {
+      const end   = new Date(now.getFullYear(), now.getMonth() - i * 3,     0);
+      const start = new Date(now.getFullYear(), now.getMonth() - i * 3 - 3, 1);
+      const fmt   = d => `${String(d.getDate()).padStart(2,'0')}.${String(d.getMonth()+1).padStart(2,'0')}.${d.getFullYear()}`;
+      const url   = `https://component-api.wertpapiere.ing.de/api/v1/components/exchangehistory/${isin}` +
+                    `?exchangeCode=TGT&currencyIsoCode=EUR&startDate=${fmt(start)}&endDate=${fmt(end)}`;
+      try {
+        const res  = await fetch(url, { headers: { Accept: "application/json", Origin: "https://www.ing.de" }});
+        if (!res.ok) continue;
+        const json = await res.json();
+        const items = json?.historyItems || [];
+        for (const item of items) {
+          if (item.close && item.date) {
+            const [d, m, y] = item.date.split(".");
+            allPrices.push({ date: new Date(y, m-1, d), close: item.close });
+          }
+        }
+      } catch(e) { /* Quartal überspringen */ }
+    }
+    return allPrices.sort((a, b) => a.date - b.date);
+  }
+
+  async _fetchHistoryYahoo(symbol, cacheKey) {
     const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}` +
                 `?interval=1d&range=1y&includePrePost=false`;
     try {
@@ -92,10 +134,10 @@ class MyPortfolioChartCard extends HTMLElement {
         date:  new Date(t * 1000),
         close: closes[i] ?? null,
       })).filter(p => p.close !== null);
-      this._cache[symbol] = { ts: Date.now(), prices };
+      this._cache[cacheKey] = { ts: Date.now(), prices };
       return prices;
     } catch (e) {
-      console.error("Chart fetch error:", e);
+      console.error("Yahoo Chart fetch error:", e);
       return null;
     }
   }
@@ -272,7 +314,18 @@ class MyPortfolioChartCard extends HTMLElement {
     if (!st.symbol || this._loading) return;
     this._loading = true;
     this._render(); // zeigt Spinner
-    const prices = await this._fetchHistory(st.symbol);
+    // ISIN aus HA-Sensor lesen (für ING-Quelle)
+    let isin = null;
+    if (this._hass) {
+      for (const [, state] of Object.entries(this._hass.states)) {
+        const a = state.attributes || {};
+        if (a.kuerzel === st.symbol && a.summary_key === undefined && a.isin) {
+          isin = a.isin;
+          break;
+        }
+      }
+    }
+    const prices = await this._fetchHistory(st.symbol, isin);
     this._prices  = prices;
     this._loading = false;
     this._render();
