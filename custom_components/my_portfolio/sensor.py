@@ -38,6 +38,7 @@ from .const import (
     ATTR_KZ_DATUM,
     ATTR_AKTUELLER_KURS,
     ATTR_PORTFOLIO_NAME,
+    ATTR_DATENQUELLE,
     ATTR_GESAMT_INVEST,
     ATTR_GESAMT_WERT,
     ATTR_PORTFOLIO_DIFFERENZ,
@@ -130,6 +131,7 @@ class StockSensor(CoordinatorEntity[MyPortfolioCoordinator], SensorEntity):
         base, data = self._base, self._data
         return {
             ATTR_PORTFOLIO_NAME:  self.coordinator.portfolio_name,
+            ATTR_DATENQUELLE:     base.get(ATTR_DATENQUELLE, ""),
             ATTR_BEZEICHNUNG:     base.get(ATTR_BEZEICHNUNG, ""),
             ATTR_WKN:             base.get(ATTR_WKN, ""),
             ATTR_ISIN:            base.get(ATTR_ISIN, ""),

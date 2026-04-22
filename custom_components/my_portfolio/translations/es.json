@@ -32,14 +32,18 @@
         "data": {
           "bezeichnung": "Nombre (p. ej. BASF SE, Apple Inc.)",
           "wkn": "WKN (opcional)",
-          "isin": "ISIN (opcional)",
+          "isin": "ISIN (obligatorio para ING)",
           "kuerzel": "Símbolo bursátil (p. ej. AAPL, BAS.DE)",
           "preis": "Precio de compra por acción",
           "stueckzahl": "Número de acciones (p. ej. 10 o 2.50)",
           "kaufdatum": "Fecha de compra",
           "limitoben": "Límite superior (alarma si se supera, 0 = sin límite)",
           "limitunten": "Límite inferior (alarma si se baja, 0 = sin límite)",
-          "kursquelle_url": "URL de la página de precios (p. ej. https://www.finanzen.net/aktien/basf-aktie)"
+          "kursquelle_url": "URL de la página de precios (p. ej. https://www.finanzen.net/aktien/basf-aktie)",
+          "datenquelle": "Fuente de datos"
+        },
+        "errors": {
+          "isin_required": "El ISIN es obligatorio si se selecciona ING como fuente"
         }
       },
       "select_stock": {
@@ -55,14 +59,18 @@
         "data": {
           "bezeichnung": "Nombre",
           "wkn": "WKN",
-          "isin": "ISIN",
+          "isin": "ISIN (obligatorio para ING)",
           "kuerzel": "Símbolo bursátil",
           "preis": "Precio de compra por acción",
           "stueckzahl": "Número de acciones (p. ej. 10 o 2.50)",
           "kaufdatum": "Fecha de compra",
           "limitoben": "Límite superior",
           "limitunten": "Límite inferior",
-          "kursquelle_url": "URL de la página de precios"
+          "kursquelle_url": "URL de la página de precios",
+          "datenquelle": "Fuente de datos"
+        },
+        "errors": {
+          "isin_required": "El ISIN es obligatorio si se selecciona ING como fuente"
         }
       },
       "confirm_delete": {

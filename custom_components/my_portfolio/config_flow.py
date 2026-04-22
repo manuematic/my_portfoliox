@@ -16,8 +16,10 @@ from .const import (
     CONF_FMP_API_KEY,
     DEFAULT_SCAN_INTERVAL,
     DEFAULT_SOURCE,
+    SOURCE_ING,
     SOURCE_YAHOO,
     ATTR_BEZEICHNUNG,
+    ATTR_DATENQUELLE,
     ATTR_WKN,
     ATTR_ISIN,
     ATTR_KUERZEL,
@@ -36,7 +38,8 @@ _LOGGER = logging.getLogger(__name__)
 
 def _source_label(source: str) -> str:
     return {
-        SOURCE_YAHOO: "Yahoo Finance (Kürzel wie AAPL, BAS.DE)",
+        SOURCE_ING:   "ING (via ISIN – aktuell, DE & internationale Aktien)",
+        SOURCE_YAHOO: "Yahoo Finance (via Kürzel – US-Aktien, ETFs)",
     }.get(source, source)
 
 
@@ -49,10 +52,19 @@ def _stock_schema(defaults: dict | None = None, data_source: str = SOURCE_YAHOO)
         vol.Required(ATTR_KUERZEL, default=d.get(ATTR_KUERZEL, "")): selector.selector(
             {"text": {"type": "text"}}
         ),
+        vol.Required(ATTR_DATENQUELLE, default=d.get(ATTR_DATENQUELLE, SOURCE_ING)): selector.selector({
+            "select": {
+                "options": [
+                    {"value": SOURCE_ING,   "label": _source_label(SOURCE_ING)},
+                    {"value": SOURCE_YAHOO, "label": _source_label(SOURCE_YAHOO)},
+                ],
+                "mode": "list",
+            }
+        }),
         vol.Optional(ATTR_WKN, default=d.get(ATTR_WKN, "")): selector.selector(
             {"text": {"type": "text"}}
         ),
-        vol.Optional(ATTR_ISIN, default=d.get(ATTR_ISIN, "")): selector.selector(
+        vol.Required(ATTR_ISIN, default=d.get(ATTR_ISIN, "")): selector.selector(
             {"text": {"type": "text"}}
         ),
         vol.Required(ATTR_PREIS, default=d.get(ATTR_PREIS, 0.0)): selector.selector(
@@ -200,9 +212,13 @@ class MyPortfolioOptionsFlow(config_entries.OptionsFlow):
         data_source = coordinator.data_source if coordinator else SOURCE_YAHOO
 
         if user_input is not None:
-            kuerzel = str(user_input.get(ATTR_KUERZEL, "")).strip().upper()
+            kuerzel  = str(user_input.get(ATTR_KUERZEL, "")).strip().upper()
+            isin     = str(user_input.get(ATTR_ISIN, "")).strip().upper()
+            quelle   = user_input.get(ATTR_DATENQUELLE, SOURCE_ING)
             if not kuerzel:
                 errors[ATTR_KUERZEL] = "invalid_kuerzel"
+            elif quelle == SOURCE_ING and not isin:
+                errors[ATTR_ISIN] = "isin_required"
             else:
                 stock_data = self._build_stock_data(user_input, kuerzel)
                 if coordinator:
@@ -274,9 +290,13 @@ class MyPortfolioOptionsFlow(config_entries.OptionsFlow):
         data_source = coordinator.data_source if coordinator else SOURCE_YAHOO
 
         if user_input is not None:
-            kuerzel = str(user_input.get(ATTR_KUERZEL, "")).strip().upper()
+            kuerzel  = str(user_input.get(ATTR_KUERZEL, "")).strip().upper()
+            isin     = str(user_input.get(ATTR_ISIN, "")).strip().upper()
+            quelle   = user_input.get(ATTR_DATENQUELLE, SOURCE_ING)
             if not kuerzel:
                 errors[ATTR_KUERZEL] = "invalid_kuerzel"
+            elif quelle == SOURCE_ING and not isin:
+                errors[ATTR_ISIN] = "isin_required"
             else:
                 stock_data = self._build_stock_data(user_input, kuerzel)
                 if coordinator and self._selected_stock_id:
@@ -330,6 +350,7 @@ class MyPortfolioOptionsFlow(config_entries.OptionsFlow):
                 vol.Required(CONF_DATA_SOURCE, default=opts[CONF_DATA_SOURCE]): selector.selector({
                     "select": {
                         "options": [
+                            {"value": SOURCE_ING,   "label": _source_label(SOURCE_ING)},
                             {"value": SOURCE_YAHOO, "label": _source_label(SOURCE_YAHOO)},
                         ],
                         "mode": "list",
@@ -356,6 +377,7 @@ class MyPortfolioOptionsFlow(config_entries.OptionsFlow):
         limit_unten = user_input.get(ATTR_LIMIT_UNTEN)
         return {
             ATTR_BEZEICHNUNG:    str(user_input.get(ATTR_BEZEICHNUNG, "")).strip(),
+            ATTR_DATENQUELLE:    user_input.get(ATTR_DATENQUELLE, SOURCE_ING),
             ATTR_KUERZEL:        kuerzel,
             ATTR_WKN:            str(user_input.get(ATTR_WKN, "")).strip().upper(),
             ATTR_ISIN:           str(user_input.get(ATTR_ISIN, "")).strip().upper(),

@@ -17,8 +17,11 @@ from .const import (
     STORAGE_VERSION,
     DEFAULT_SCAN_INTERVAL,
     DEFAULT_SOURCE,
+    SOURCE_ING,
     SOURCE_YAHOO,
     CONF_DATA_SOURCE,
+    ATTR_DATENQUELLE,
+    ATTR_ISIN,
     ATTR_BEZEICHNUNG,
     ATTR_KUERZEL,
     ATTR_WKN,
@@ -47,6 +50,7 @@ from .const import (
     ATTR_PORTFOLIO_PROZENT,
 )
 from .yahoo_finance import fetch_price_yahoo
+from .ing import fetch_price_ing
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -92,7 +96,21 @@ class MyPortfolioCoordinator(DataUpdateCoordinator):
         )
 
     async def _fetch_price(self, stock: dict) -> dict:
-        """Kurs für eine Aktie von Yahoo Finance abrufen."""
+        """Kurs abrufen – Quelle pro Aktie wählbar (ING via ISIN oder Yahoo via Kürzel)."""
+        # Quelle pro Aktie hat Vorrang, sonst Portfolio-Default
+        quelle = stock.get(ATTR_DATENQUELLE) or self.data_source
+
+        if quelle == SOURCE_ING:
+            isin = (stock.get(ATTR_ISIN) or "").strip()
+            if isin:
+                return await fetch_price_ing(self._session, isin)
+            # Kein ISIN → Fallback auf Yahoo
+            _LOGGER.warning(
+                "ING gewählt aber kein ISIN für '%s' – Fallback auf Yahoo",
+                stock.get(ATTR_KUERZEL, "?"),
+            )
+
+        # Yahoo Finance (Default-Fallback)
         return await fetch_price_yahoo(self._session, stock.get(ATTR_KUERZEL, ""))
 
     async def _async_update_data(self) -> dict[str, dict]:

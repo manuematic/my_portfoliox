@@ -14,8 +14,9 @@ CONF_DATA_SOURCE = "data_source"
 DEFAULT_SCAN_INTERVAL = 15  # minutes
 
 # Data sources
+SOURCE_ING   = "ing"
 SOURCE_YAHOO = "yahoo_finance"
-DEFAULT_SOURCE = SOURCE_YAHOO
+DEFAULT_SOURCE = SOURCE_ING
 
 # Stock attribute keys
 ATTR_BEZEICHNUNG = "bezeichnung"
@@ -35,6 +36,7 @@ ATTR_TAGES_ABS = "tages_aenderung_abs"
 ATTR_TAGES_PCT = "tages_aenderung_pct"
 ATTR_AKTUELLER_KURS = "aktueller_kurs"
 ATTR_PORTFOLIO_NAME = "portfolio_name"
+ATTR_DATENQUELLE    = "datenquelle"     # "ing" oder "yahoo_finance" pro Aktie
 
 # Portfolio-Gesamt-Sensoren
 ATTR_GESAMT_INVEST = "gesamtinvest"

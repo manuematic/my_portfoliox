@@ -32,14 +32,18 @@
         "data": {
           "bezeichnung": "Name (e.g. BASF SE, Apple Inc.)",
           "wkn": "WKN (optional)",
-          "isin": "ISIN (optional)",
+          "isin": "ISIN (required for ING)",
           "kuerzel": "Ticker Symbol (e.g. AAPL, BAS.DE)",
           "preis": "Purchase Price per Share",
           "stueckzahl": "Number of Shares (e.g. 10 or 2.50)",
           "kaufdatum": "Purchase Date",
           "limitoben": "Upper Limit (alarm when exceeded, 0 = no limit)",
           "limitunten": "Lower Limit (alarm when undercut, 0 = no limit)",
-          "kursquelle_url": "Price Page URL (e.g. https://www.finanzen.net/aktien/basf-aktie)"
+          "kursquelle_url": "Price Page URL (e.g. https://www.finanzen.net/aktien/basf-aktie)",
+          "datenquelle": "Data source"
+        },
+        "errors": {
+          "isin_required": "ISIN is required when ING is selected as data source"
         }
       },
       "select_stock": {
@@ -55,14 +59,18 @@
         "data": {
           "bezeichnung": "Name",
           "wkn": "WKN",
-          "isin": "ISIN",
+          "isin": "ISIN (required for ING)",
           "kuerzel": "Ticker Symbol",
           "preis": "Purchase Price per Share",
           "stueckzahl": "Number of Shares (e.g. 10 or 2.50)",
           "kaufdatum": "Purchase Date",
           "limitoben": "Upper Limit",
           "limitunten": "Lower Limit",
-          "kursquelle_url": "Price Page URL"
+          "kursquelle_url": "Price Page URL",
+          "datenquelle": "Data source"
+        },
+        "errors": {
+          "isin_required": "ISIN is required when ING is selected as data source"
         }
       },
       "confirm_delete": {
