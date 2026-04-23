@@ -3,13 +3,22 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from typing import TypedDict
 
 import aiohttp
 
 _LOGGER = logging.getLogger(__name__)
 
-ING_API_BASE = "https://component-api.wertpapiere.ing.de/api/v1/components"
+# Korrekter Endpunkt (getestet 2026-04-23)
+# GET /api/v1/instrument-header?isinOrSearchTerm={ISIN}
+# Antwort-Felder:
+#   price           – aktueller Kurs (Direkthandel/Tradegate)
+#   changeAbsolute  – Tagesveränderung absolut in €
+#   changePercent   – Tagesveränderung in %
+#   bid / ask       – Geld/Brief
+#   priceChangeDate – Zeitstempel des Kurses
+#   name            – Wertpapier-Name
+#   exchangeName    – Handelsplatz (z.B. "Direkthandel")
+ING_API_BASE = "https://component-api.wertpapiere.ing.de/api/v1"
 
 _ING_HEADERS = {
     "Accept":          "application/json, text/plain, */*",
@@ -23,15 +32,7 @@ _ING_HEADERS = {
     ),
 }
 
-
-class PriceData(TypedDict, total=False):
-    aktueller_kurs:       float | None
-    kurs_vortag:          float | None
-    tages_aenderung_abs:  float | None
-    tages_aenderung_pct:  float | None
-
-
-_EMPTY: PriceData = {
+_EMPTY = {
     "aktueller_kurs":      None,
     "kurs_vortag":         None,
     "tages_aenderung_abs": None,
@@ -42,28 +43,20 @@ _EMPTY: PriceData = {
 async def fetch_price_ing(
     session: aiohttp.ClientSession,
     isin: str,
-) -> PriceData:
-    """Aktuellen Kurs einer Aktie von der ING-API abrufen.
-
-    Endpunkt: GET /api/v1/components/instrumentheader/{ISIN}
-    Antwort-Felder (relevante Auswahl):
-      $.price              – aktueller Kurs
-      $.previousPrice      – Vortages-Schlusskurs
-      $.priceChangeAbsolut – Tagesveränderung absolut
-      $.priceChangePercent – Tagesveränderung in %
-      $.priceChangeDate    – Datum/Zeit des Kurses
-      $.currency           – Währung
-      $.name               – Wertpapier-Name
-    """
+) -> dict:
+    """Aktuellen Kurs von der ING-API abrufen."""
     isin = isin.strip().upper()
     if not isin:
-        _LOGGER.warning("ING: Leere ISIN übergeben")
+        _LOGGER.warning("ING: Leere ISIN uebergeben")
         return _EMPTY.copy()
 
-    url = f"{ING_API_BASE}/instrumentheader/{isin}"
+    url = f"{ING_API_BASE}/instrument-header"
+    params = {"isinOrSearchTerm": isin}
+
     try:
         async with session.get(
             url,
+            params=params,
             headers=_ING_HEADERS,
             timeout=aiohttp.ClientTimeout(total=15),
         ) as resp:
@@ -71,47 +64,48 @@ async def fetch_price_ing(
                 _LOGGER.warning("ING: ISIN '%s' nicht gefunden (404)", isin)
                 return _EMPTY.copy()
             if resp.status == 403:
-                _LOGGER.warning(
-                    "ING: Zugriff verweigert für ISIN '%s' (403) – "
-                    "API ggf. nur aus Deutschland erreichbar", isin
-                )
+                _LOGGER.warning("ING: Zugriff verweigert fuer '%s' (403)", isin)
                 return _EMPTY.copy()
             if resp.status != 200:
-                _LOGGER.warning("ING: HTTP %s für ISIN '%s'", resp.status, isin)
+                _LOGGER.warning("ING: HTTP %s fuer ISIN '%s'", resp.status, isin)
                 return _EMPTY.copy()
 
             data = await resp.json(content_type=None)
 
-            kurs       = data.get("price")
-            vortag     = data.get("previousPrice")
-            tages_abs  = data.get("priceChangeAbsolut")   # ING-Schreibweise
-            tages_pct  = data.get("priceChangePercent")
+            kurs      = data.get("price")
+            tages_abs = data.get("changeAbsolute")
+            tages_pct = data.get("changePercent")
 
-            # Fallback: selbst berechnen wenn ING-Felder fehlen
-            if kurs is not None and vortag and tages_abs is None:
-                tages_abs = round(float(kurs) - float(vortag), 4)
-            if kurs is not None and vortag and tages_pct is None and float(vortag) != 0:
-                tages_pct = (float(kurs) - float(vortag)) / float(vortag) * 100.0
+            if kurs is None:
+                _LOGGER.warning(
+                    "ING: Kein 'price'-Feld fuer ISIN '%s'. "
+                    "Verfuegbare Felder: %s", isin, list(data.keys())
+                )
+                return _EMPTY.copy()
 
-            result: PriceData = {
-                "aktueller_kurs":      round(float(kurs), 5)      if kurs      is not None else None,
-                "kurs_vortag":         round(float(vortag), 5)    if vortag    is not None else None,
-                "tages_aenderung_abs": round(float(tages_abs), 3) if tages_abs is not None else None,
-                "tages_aenderung_pct": round(float(tages_pct), 2) if tages_pct is not None else None,
-            }
+            kurs      = float(kurs)
+            tages_abs = float(tages_abs) if tages_abs is not None else None
+            tages_pct = float(tages_pct) if tages_pct is not None else None
+
+            # Vortag berechnen: price - changeAbsolute
+            vortag = None
+            if tages_abs is not None:
+                vortag = round(kurs - tages_abs, 5)
 
             _LOGGER.debug(
-                "ING: %s kurs=%.3f vortag=%s tages_pct=%s",
-                isin,
-                float(kurs) if kurs else 0,
-                vortag,
-                tages_pct,
+                "ING: %s kurs=%.4f abs=%s pct=%s",
+                isin, kurs, tages_abs, tages_pct
             )
-            return result
+            return {
+                "aktueller_kurs":      round(kurs, 5),
+                "kurs_vortag":         vortag,
+                "tages_aenderung_abs": round(tages_abs, 4) if tages_abs is not None else None,
+                "tages_aenderung_pct": round(tages_pct, 4) if tages_pct is not None else None,
+            }
 
     except (aiohttp.ClientError, asyncio.TimeoutError) as err:
-        _LOGGER.warning("ING: Verbindungsfehler für ISIN '%s': %s", isin, err)
+        _LOGGER.warning("ING: Verbindungsfehler fuer ISIN '%s': %s", isin, err)
     except Exception as err:  # pylint: disable=broad-except
-        _LOGGER.error("ING: Unerwarteter Fehler für ISIN '%s': %s", isin, err)
+        _LOGGER.error("ING: Unerwarteter Fehler fuer ISIN '%s': %s", isin, err)
 
     return _EMPTY.copy()
