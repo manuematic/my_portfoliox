@@ -2,122 +2,196 @@
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/hacs/integration)
 [![GitHub release](https://img.shields.io/github/release/manuematic/my_portfolio.svg)](https://github.com/manuematic/my_portfolio/releases)
+[![HA Version](https://img.shields.io/badge/Home%20Assistant-2024.1%2B-blue.svg)](https://www.home-assistant.io/)
 
-Eine Home Assistant Integration zum Verwalten und Überwachen von Aktienportfolios mit Live-Kursen von Yahoo Finance.
+Eine Home Assistant Custom Integration zur Verwaltung und Überwachung von Aktienportfolios. Kursdaten werden primär von der **ING Wertpapiere API** bezogen – zuverlässig, aktuell und ohne API-Key. Optional können Analysten-Kursziele über **Financial Modeling Prep (FMP)** abgerufen werden.
 
 ---
 
-## Features
+## ✨ Features
 
-- 📊 **Live-Börsenkurse** via Yahoo Finance (automatische Aktualisierung)
+### Kursdaten
+- 📡 **ING Wertpapiere API** als primäre Kursquelle (via ISIN, kein Key erforderlich)
+- 📊 **Yahoo Finance** als Alternative – ideal für US-Aktien und ETFs ohne ISIN
+- ⚙️ **Datenquelle pro Aktie** wählbar – ING und Yahoo lassen sich mischen
+- 🔄 **Automatische Aktualisierung** im konfigurierbaren Intervall (Standard: 15 Min.)
+
+### Portfolio-Verwaltung
 - 💼 **Mehrere Portfolios** gleichzeitig verwaltbar
-- 📉 **Gewinn/Verlust-Berechnung** in Echtzeit
-- 🔔 **Kurs-Alarme** (Limit oben / Limit unten)
-- 💾 **Persistente Speicherung** – Daten bleiben nach Neustart erhalten
-- 🔧 Konfigurierbar über **HA Services** und **Automationen**
+- ➕ Aktien vollständig über die **HA-Benutzeroberfläche** hinzufügen, bearbeiten, löschen
+- 🔢 **Stückzahl als Dezimalzahl** – Bruchteile für ETF-Sparpläne möglich (z.B. 2,50 Stück)
+- 💾 **Persistente Speicherung** – Daten bleiben nach HA-Neustart erhalten
+
+### Berechnungen & Alarme
+- 📈 **Gewinn/Verlust** in % und € seit Kauf (Echtzeit)
+- 📉 **Tagesperformance** absolut und prozentual
+- 🔔 **Kurs-Alarme** – Limit oben / Limit unten mit Boolean-Sensoren
+- 💹 **Portfolio-Gesamt-Sensoren** – Gesamtinvest, aktueller Wert, Rendite %
+
+### Analysten-Kursziele (optional)
+- 🎯 Kursziel Hoch / Tief / Mittel der letzten 12 Monate
+- 🗳️ Konsens-Rating: Buy / Hold / Sell
+- 🔢 Anzahl der Analysten
+
+### Dashboard-Visualisierung
+- 🃏 **9 spezialisierte Lovelace-Cards** – keine externe Card-Library nötig
+- 📉 **Jahreschart** mit SMA 100/200, Trendlinie und Analysten-Kursziel
+- 🌍 **4 Sprachen**: Deutsch, Englisch, Französisch, Spanisch
 
 ---
 
-## Installation via HACS
+## 📋 Voraussetzungen
 
-1. HACS in Home Assistant öffnen
-2. **Integrationen** → **⋮** → **Benutzerdefinierte Repositories**
-3. URL eingeben: `https://github.com/manuematic/my_portfolio`
-4. Kategorie: **Integration** → **Hinzufügen**
-5. Integration suchen: **Mein Portfolio** → **Installieren**
-6. Home Assistant **neu starten**
+| Anforderung | Details |
+|---|---|
+| Home Assistant | Version 2024.1 oder neuer |
+| HACS | Installiert und eingerichtet |
+| Internetzugang | Für ING API und optional FMP |
+| ING API-Key | Nicht erforderlich |
+| FMP API-Key | Optional – kostenlos auf [financialmodelingprep.com](https://financialmodelingprep.com/register) |
 
 ---
 
-## Einrichtung
+## 🚀 Installation
+
+### 1. Integration via HACS
+
+1. HACS öffnen → **Integrationen** → **⋮** → **Benutzerdefinierte Repositories**
+2. URL eingeben: `https://github.com/manuematic/my_portfolio`
+3. Kategorie: **Integration** → **Hinzufügen**
+4. Integration suchen: **Mein Portfolio** → **Installieren**
+5. Home Assistant **neu starten**
+
+### 2. Dashboard-Cards installieren
+
+1. Alle `.js`-Dateien aus dem `www/`-Ordner nach `/config/www/` kopieren
+2. **Einstellungen → Dashboards → Ressourcen → + Ressource hinzufügen**
+3. Für jede Datei: `/local/dateiname.js` → Typ: **JavaScript-Modul**
+
+> **Tipp bei Updates:** Nach dem Ersetzen einer `.js`-Datei den Browsercache umgehen,
+> indem die Ressource-URL um eine Versionsnummer ergänzt wird: `/local/dateiname.js?v=2`
+
+---
+
+## ⚙️ Einrichtung
 
 1. **Einstellungen → Integrationen → + Integration hinzufügen**
-2. Nach **"Mein Portfolio"** suchen
-3. Portfolio-Namen eingeben (z.B. "Technologie-Depot")
+2. Nach **„Mein Portfolio"** suchen und auswählen
+3. Portfolio-Namen eingeben (z.B. „Technologie-Depot")
 4. Aktualisierungsintervall wählen (Standard: 15 Minuten)
-5. **Speichern**
-
-Die **Config Entry ID** findest du unter:  
-`Einstellungen → Integrationen → Mein Portfolio → ⋮ → Informationen`
+5. Optional: **FMP API-Key** für Analysten-Kursziele eintragen
 
 ---
 
-## Aktien verwalten
+## 📥 Aktien verwalten
 
-### Aktie hinzufügen
+Alle Aktien werden direkt über die HA-Benutzeroberfläche verwaltet:
 
-Über **Entwicklerwerkzeuge → Services → `my_portfolio.add_stock`**:
+**Einstellungen → Integrationen → Mein Portfolio → Konfigurieren**
 
-```yaml
-service: my_portfolio.add_stock
-data:
-  entry_id: "abc123def456"   # Deine Portfolio-ID
-  kuerzel: "AAPL"
-  preis: 182.500             # Kaufpreis pro Stück
-  stueckzahl: 10
-  kaufdatum: "2024-01-15"
-  limitoben: 200.000         # optional: Alarm wenn Kurs > 200
-  limitunten: 160.000        # optional: Alarm wenn Kurs < 160
-```
+### Felder beim Hinzufügen
 
-**Beispiele für Kürzel:**
-| Aktie | Kürzel |
-|---|---|
-| Apple | `AAPL` |
-| SAP (Xetra) | `SAP.DE` |
-| Bitcoin | `BTC-USD` |
-| DAX ETF | `EXS1.DE` |
-
-### Aktie aktualisieren
-
-```yaml
-service: my_portfolio.update_stock
-data:
-  entry_id: "abc123def456"
-  stock_id: "550e8400-e29b-41d4-a716-446655440000"  # aus Entity-Attributen
-  stueckzahl: 15
-  limitoben: 220.000
-```
-
-### Aktie entfernen
-
-```yaml
-service: my_portfolio.remove_stock
-data:
-  entry_id: "abc123def456"
-  stock_id: "550e8400-e29b-41d4-a716-446655440000"
-```
-
----
-
-## Entitäten & Attribute
-
-Für jede Aktie wird eine **Sensor-Entität** erstellt mit:
-
-| Attribut | Typ | Beschreibung |
+| Feld | Pflicht | Beschreibung |
 |---|---|---|
-| **State** | float | Aktueller Kurs (Yahoo Finance) |
-| `kuerzel` | text | Börsenkürzel |
-| `preis` | float (5,3) | Kaufpreis pro Stück |
-| `stueckzahl` | integer (6) | Anzahl der Stücke |
-| `kaufdatum` | date | Kaufdatum |
-| `limitoben` | float (5,3) | Oberes Kurslimit |
-| `limitunten` | float (5,3) | Unteres Kurslimit |
-| `aktueller_kurs` | float | Live-Kurs |
-| `alarmoben` | boolean | `true` wenn Kurs ≥ limitoben |
-| `alarmunten` | boolean | `true` wenn Kurs ≤ limitunten |
-| `gewinn` | float (4,3) | (Kurs − Kaufpreis) × Stückzahl |
+| Kürzel | ✅ | Börsenkürzel (z.B. `AAPL`, `SAP.DE`) |
+| Datenquelle | ✅ | **ING** (empfohlen) oder Yahoo Finance |
+| ISIN | ✅ bei ING | z.B. `DE0007164600` für SAP |
+| WKN | ☐ | z.B. `716460` |
+| Bezeichnung | ✅ | Anzeigename (z.B. „SAP SE") |
+| Kaufpreis | ✅ | Preis pro Stück in € (z.B. `182.500`) |
+| Stückzahl | ✅ | Anzahl Stücke, Dezimalzahl möglich (z.B. `2.50`) |
+| Kaufdatum | ✅ | Datum des Kaufs |
+| Limit unten | ☐ | Alarm wenn Kurs diesen Wert unterschreitet |
+| Limit oben | ☐ | Alarm wenn Kurs diesen Wert überschreitet |
+
+### Kürzel- und ISIN-Beispiele
+
+| Aktie | ISIN (für ING) | Kürzel (für Yahoo) |
+|---|---|---|
+| SAP SE | `DE0007164600` | `SAP.DE` |
+| BASF | `DE000BASF111` | `BAS.DE` |
+| Apple | `US0378331005` | `AAPL` |
+| Microsoft | `US5949181045` | `MSFT` |
+| Bitcoin | – | `BTC-USD` |
+| iShares DAX ETF | `DE0005933931` | `EXS1.DE` |
 
 ---
 
-## Automation-Beispiel: Kurs-Alarm per Push
+## 🃏 Dashboard-Cards
+
+### Übersicht
+```yaml
+type: custom:my-portfolio-overview-card
+title: Mein Portfolio
+```
+
+### Top/Flop Gesamtperformance
+```yaml
+type: custom:my-portfolio-topflop-card
+```
+
+### Gesamtperformance (alle Aktien, sortierbar)
+```yaml
+type: custom:my-portfolio-total-performance-card
+sort: pct      # pct | eur | alpha
+order: desc    # desc | asc
+```
+
+### Tages Top/Flop
+```yaml
+type: custom:my-portfolio-daily-topflop-card
+```
+
+### Tagesperformance (alle Aktien, sortierbar)
+```yaml
+type: custom:my-portfolio-daily-all-card
+sort: pct
+order: desc
+```
+
+### Watchlist mit Limit-Status
+```yaml
+type: custom:my-portfolio-watchlist-card
+sort: alpha    # alpha | pct | kurs
+order: asc
+```
+Kreisrunder Statusindikator pro Aktie:
+- ⬜ Leerer Ring = innerhalb der Limits (oder kein Limit gesetzt)
+- 🟢 Grüner Ring = Limit oben überschritten
+- 🔴 Roter Ring = Limit unten unterschritten
+
+### Limit-Alarme
+```yaml
+type: custom:my-portfolio-alerts-card
+```
+Zeigt nur Aktien mit aktivem Alarm. Bei keinem Alarm: ✅ Bestätigungsmeldung.
+
+### Kursverlauf (Chart)
+```yaml
+type: custom:my-portfolio-chart-card
+title: Kursverlauf
+```
+Jahreschart mit auswählbarer Aktie. Optionale Overlays:
+100-Tage-Linie · 200-Tage-Linie · Trendlinie · Analysten-Kursziel
+
+### Analysten-Kursziele
+```yaml
+type: custom:my-portfolio-analyst-card
+sort: upside   # upside | pct | alpha
+order: desc
+```
+Erfordert FMP API-Key in den Integrationseinstellungen.
+
+---
+
+## 🔔 Automation-Beispiel: Kurs-Alarm
 
 ```yaml
 automation:
-  alias: "Portfolio Alarm – Apple überschreitet 200€"
+  alias: "Portfolio Alarm – Limit überschritten"
   trigger:
     - platform: state
-      entity_id: sensor.aapl
+      entity_id: sensor.sap_se
       attribute: alarmoben
       to: true
   action:
@@ -125,47 +199,47 @@ automation:
       data:
         title: "📈 Kurs-Alarm!"
         message: >
-          {{ state_attr('sensor.aapl', 'kuerzel') }} hat das obere Limit
-          ({{ state_attr('sensor.aapl', 'limitoben') }}) überschritten.
-          Aktueller Kurs: {{ states('sensor.aapl') }}
+          {{ state_attr('sensor.sap_se', 'bezeichnung') }} hat das obere Limit
+          ({{ state_attr('sensor.sap_se', 'limitoben') }} €) überschritten.
+          Aktueller Kurs: {{ states('sensor.sap_se') }} €
 ```
 
 ---
 
-## Lovelace-Dashboard Beispiel
+## 📡 Datenquellen
 
-```yaml
-type: entities
-title: 📈 Mein Portfolio
-entities:
-  - entity: sensor.aapl
-    name: Apple Inc.
-    icon: mdi:apple
-  - entity: sensor.sap_de
-    name: SAP SE
-  - entity: sensor.btc_usd
-    name: Bitcoin
-```
-
-**Oder als History-Graph:**
-```yaml
-type: history-graph
-title: Kursverlauf
-entities:
-  - entity: sensor.aapl
-hours_to_show: 48
-```
+| Quelle | Verwendung | API-Key | Limit |
+|---|---|---|---|
+| **ING Wertpapiere** | Aktuelle Kurse (Default) | Nein | Keine bekannte Begrenzung |
+| **Yahoo Finance** | Kurse US-Aktien / Fallback | Nein | Inoffiziell, kann variieren |
+| **Financial Modeling Prep** | Analysten-Kursziele | Ja (kostenlos) | 250 Req./Tag |
 
 ---
 
-## Hinweise
+## 🏷️ Sensor-Attribute
 
-- Yahoo Finance kann gelegentlich das Scraping-Format ändern – bei leeren Kursen bitte ein Issue erstellen.
-- Außerhalb der Handelszeiten wird der letzte verfügbare Kurs angezeigt.
-- Das Aktualisierungsintervall kann in den Integrationsoptionen angepasst werden.
+| Attribut | Beschreibung |
+|---|---|
+| `kuerzel` | Börsenkürzel |
+| `bezeichnung` | Name der Aktie |
+| `isin` | ISIN |
+| `wkn` | WKN |
+| `preis` | Kaufpreis pro Stück in € |
+| `stueckzahl` | Anzahl Stücke (Dezimal möglich) |
+| `kaufdatum` | Kaufdatum |
+| `datenquelle` | `ing` oder `yahoo_finance` |
+| `limitoben` / `limitunten` | Kurslimits |
+| `alarmoben` / `alarmunten` | Alarm-Boolean |
+| `gewinn` | Performance seit Kauf in % |
+| `kurs_vortag` | Vortages-Schlusskurs |
+| `tages_aenderung_abs` | Tagesveränderung in € |
+| `tages_aenderung_pct` | Tagesveränderung in % |
+| `kursziel_hoch/tief/mittel` | Analysten-Kursziele (FMP) |
+| `analysten_konsens` | Buy / Hold / Sell |
+| `portfolio_name` | Zugehöriges Portfolio |
 
 ---
 
-## Lizenz
+## 📝 Lizenz
 
 MIT License

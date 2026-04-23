@@ -1,145 +1,149 @@
 /**
- * my-portfolio-chart-card  v0.9.2
- * Grafischer Kursverlauf einer Aktie (1 Jahr) mit 100/200-Tage-Linie und Trendlinie.
+ * my-portfolio-chart-card  v0.9.7
+ * Jahreschart + Kennzahlen-Panel
  *
  * YAML:
  *   type: custom:my-portfolio-chart-card
- *   title: Kursverlauf       # optional
+ *   title: Kursverlauf   # optional
  */
 
 const _chartState = new Map();
 let   _chartUid   = 0;
 
+// ── Hilfsfunktion: Ø-Kursziel aus HA-States ─────────────────────────────────
+function _getSensorAttr(hass, symbol, attr) {
+  if (!hass || !symbol) return null;
+  for (const [, state] of Object.entries(hass.states)) {
+    const a = state.attributes || {};
+    if (a.kuerzel === symbol && a.summary_key === undefined)
+      return a[attr] ?? null;
+  }
+  return null;
+}
+
+// ── Card-Klasse ──────────────────────────────────────────────────────────────
 class MyPortfolioChartCard extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({ mode: "open" });
-    this._uid      = ++_chartUid;
-    this._cache    = {};   // { symbol: { ts, prices } }
-    this._loading  = false;
+    this._uid     = ++_chartUid;
+    this._cache   = {};
+    this._loading = false;
   }
 
   setConfig(config) {
     this._config = config;
     if (!_chartState.has(this._uid)) {
       _chartState.set(this._uid, {
-        portfolio: null,
-        symbol:    null,
-        sma100:    false,
-        sma200:    false,
-        trend:     false,
-        kursziel:  false,
+        portfolio: null, symbol: null,
+        sma100: false, sma200: false, trend: false, kursziel: false,
       });
     }
   }
 
-  get _st()       { return _chartState.get(this._uid) || {}; }
-  _set(key, val)  { const s = this._st; s[key] = val; _chartState.set(this._uid, s); }
+  get _st()      { return _chartState.get(this._uid) || {}; }
+  _set(k, v)     { const s = this._st; s[k] = v; _chartState.set(this._uid, s); }
 
   set hass(hass) {
     this._hass = hass;
-    // Erstes Portfolio/Symbol automatisch wählen
     const st = this._st;
     if (!st.portfolio || !st.symbol) {
       const stocks = this._getStocks();
-      if (stocks.length > 0 && !st.portfolio) {
-        this._set("portfolio", stocks[0].portfolio);
-        const first = stocks.find(s => s.portfolio === stocks[0].portfolio);
-        if (first) this._set("symbol", first.kuerzel);
+      if (stocks.length > 0) {
+        if (!st.portfolio) this._set("portfolio", stocks[0].portfolio);
+        const first = stocks.find(s => s.portfolio === (this._st.portfolio || stocks[0].portfolio));
+        if (first && !st.symbol) this._set("symbol", first.kuerzel);
       }
     }
     this._render();
   }
 
-  // ── Hilfsmethoden ────────────────────────────────────────────────────────
+  // ── Hilfsmethoden ───────────────────────────────────────────────────────
 
   _getStocks() {
     const stocks = [];
     for (const [, state] of Object.entries(this._hass.states)) {
-      const attr = state.attributes || {};
-      if (attr.kuerzel === undefined || attr.summary_key !== undefined) continue;
+      const a = state.attributes || {};
+      if (a.kuerzel === undefined || a.summary_key !== undefined) continue;
       stocks.push({
-        bezeichnung: (attr.bezeichnung || attr.kuerzel || "").trim(),
-        kuerzel:     attr.kuerzel,
-        portfolio:   attr.portfolio_name || "Standard",
+        bezeichnung: (a.bezeichnung || a.kuerzel || "").trim(),
+        kuerzel:     a.kuerzel,
+        portfolio:   a.portfolio_name || "Standard",
+        isin:        a.isin || null,
       });
     }
     return stocks.sort((a, b) => a.bezeichnung.localeCompare(b.bezeichnung, "de"));
   }
 
-  _portfolios() {
-    return [...new Set(this._getStocks().map(s => s.portfolio))];
+  _stocksForPortfolio(p) { return this._getStocks().filter(s => s.portfolio === p); }
+  _portfolios()           { return [...new Set(this._getStocks().map(s => s.portfolio))]; }
+
+  _currentIsin() {
+    const s = this._getStocks().find(s => s.kuerzel === this._st.symbol);
+    return s?.isin || null;
   }
 
-  _stocksForPortfolio(portfolio) {
-    return this._getStocks().filter(s => s.portfolio === portfolio);
-  }
+  // ── Datenabruf ──────────────────────────────────────────────────────────
 
   async _fetchHistory(symbol, isin) {
-    const cacheKey = isin || symbol;
-    const cached = this._cache[cacheKey];
+    const key    = isin || symbol;
+    const cached = this._cache[key];
     if (cached && Date.now() - cached.ts < 5 * 60 * 1000) return cached.prices;
 
-    // ING als primäre Quelle wenn ISIN vorhanden (letztes Jahr via Tradegate)
     if (isin) {
       const prices = await this._fetchHistoryING(isin);
       if (prices && prices.length > 10) {
-        this._cache[cacheKey] = { ts: Date.now(), prices };
+        this._cache[key] = { ts: Date.now(), prices };
         return prices;
       }
-      console.warn("ING Chart-Daten unvollständig, Fallback auf Yahoo:", symbol);
     }
-
-    // Yahoo Finance Fallback
-    return await this._fetchHistoryYahoo(symbol, cacheKey);
+    return await this._fetchHistoryYahoo(symbol, key);
   }
 
   async _fetchHistoryING(isin) {
-    // ING liefert nur 3 Monate pro Request → 4 Requests für 1 Jahr
-    const allPrices = [];
+    const all = [];
     const now = new Date();
+    const fmt  = d => `${String(d.getDate()).padStart(2,"0")}.${String(d.getMonth()+1).padStart(2,"0")}.${d.getFullYear()}`;
     for (let i = 3; i >= 0; i--) {
       const end   = new Date(now.getFullYear(), now.getMonth() - i * 3,     0);
       const start = new Date(now.getFullYear(), now.getMonth() - i * 3 - 3, 1);
-      const fmt   = d => `${String(d.getDate()).padStart(2,'0')}.${String(d.getMonth()+1).padStart(2,'0')}.${d.getFullYear()}`;
       const url   = `https://component-api.wertpapiere.ing.de/api/v1/components/exchangehistory/${isin}` +
                     `?exchangeCode=TGT&currencyIsoCode=EUR&startDate=${fmt(start)}&endDate=${fmt(end)}`;
       try {
         const res  = await fetch(url, { headers: { Accept: "application/json", Origin: "https://www.ing.de" }});
         if (!res.ok) continue;
         const json = await res.json();
-        const items = json?.historyItems || [];
-        for (const item of items) {
+        for (const item of (json?.historyItems || [])) {
           if (item.close && item.date) {
             const [d, m, y] = item.date.split(".");
-            allPrices.push({ date: new Date(y, m-1, d), close: item.close });
+            all.push({ date: new Date(+y, +m-1, +d), close: item.close,
+                       high: item.high || item.close, low: item.low || item.close });
           }
         }
-      } catch(e) { /* Quartal überspringen */ }
+      } catch(e) { /* überspringen */ }
     }
-    return allPrices.sort((a, b) => a.date - b.date);
+    return all.sort((a, b) => a.date - b.date);
   }
 
   async _fetchHistoryYahoo(symbol, cacheKey) {
     const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}` +
                 `?interval=1d&range=1y&includePrePost=false`;
     try {
-      const res  = await fetch(url, { headers: { Accept: "application/json" } });
+      const res  = await fetch(url, { headers: { Accept: "application/json" }});
       const json = await res.json();
-      const result = json?.chart?.result?.[0];
-      if (!result) return null;
-      const ts     = result.timestamp || [];
-      const closes = result.indicators?.quote?.[0]?.close || [];
+      const r    = json?.chart?.result?.[0];
+      if (!r) return null;
+      const ts     = r.timestamp || [];
+      const q      = r.indicators?.quote?.[0] || {};
       const prices = ts.map((t, i) => ({
         date:  new Date(t * 1000),
-        close: closes[i] ?? null,
+        close: q.close?.[i] ?? null,
+        high:  q.high?.[i]  ?? null,
+        low:   q.low?.[i]   ?? null,
       })).filter(p => p.close !== null);
       this._cache[cacheKey] = { ts: Date.now(), prices };
       return prices;
-    } catch (e) {
-      console.error("Yahoo Chart fetch error:", e);
-      return null;
-    }
+    } catch(e) { return null; }
   }
 
   // ── Technische Indikatoren ───────────────────────────────────────────────
@@ -147,13 +151,12 @@ class MyPortfolioChartCard extends HTMLElement {
   _sma(prices, n) {
     return prices.map((_, i) => {
       if (i < n - 1) return null;
-      const slice = prices.slice(i - n + 1, i + 1);
-      return slice.reduce((s, p) => s + p.close, 0) / n;
+      return prices.slice(i - n + 1, i + 1).reduce((s, p) => s + p.close, 0) / n;
     });
   }
 
   _trendline(prices) {
-    const n = prices.length;
+    const n  = prices.length;
     if (n < 2) return [];
     const xs = prices.map((_, i) => i);
     const ys = prices.map(p => p.close);
@@ -161,34 +164,25 @@ class MyPortfolioChartCard extends HTMLElement {
     const my = ys.reduce((a, b) => a + b, 0) / n;
     const num = xs.reduce((s, x, i) => s + (x - mx) * (ys[i] - my), 0);
     const den = xs.reduce((s, x) => s + (x - mx) ** 2, 0);
-    const slope = den ? num / den : 0;
-    const inter = my - slope * mx;
-    return xs.map(x => slope * x + inter);
+    const m   = den ? num / den : 0;
+    return xs.map(x => m * x + (my - m * mx));
   }
 
   // ── SVG Chart ────────────────────────────────────────────────────────────
 
   _drawChart(prices) {
-    if (!prices || prices.length < 2) return `<div class="no-data">Keine Daten verfügbar</div>`;
+    if (!prices || prices.length < 2)
+      return `<div class="no-data">Keine Daten verfügbar</div>`;
 
-    const st      = this._st;
-    const W       = 800;
-    const H       = 320;
-    const padL    = 55;
-    const padR    = 16;
-    const padT    = 20;
-    const padB    = 40;
-    const cW      = W - padL - padR;
-    const cH      = H - padT - padB;
-    const n       = prices.length;
+    const st   = this._st;
+    const W = 800, H = 300, padL = 55, padR = 18, padT = 16, padB = 36;
+    const cW = W - padL - padR, cH = H - padT - padB;
+    const n  = prices.length;
 
     const closes  = prices.map(p => p.close);
-    const kzSensor = _getKursziel(this._hass, this._st.symbol);
-    const kzVal    = kzSensor ? parseFloat(kzSensor) : null;
-
+    const kzVal   = parseFloat(_getSensorAttr(this._hass, st.symbol, "kursziel_mittel")) || null;
     const allVals = [...closes];
 
-    // Werte für Skalierung sammeln
     const sma100v = st.sma100 ? this._sma(prices, 100) : [];
     const sma200v = st.sma200 ? this._sma(prices, 200) : [];
     const trendv  = st.trend  ? this._trendline(prices) : [];
@@ -202,25 +196,15 @@ class MyPortfolioChartCard extends HTMLElement {
     const maxV = Math.max(...allVals) * 1.002;
     const rng  = maxV - minV || 1;
 
-    const xOf  = i => padL + (i / (n - 1)) * cW;
-    const yOf  = v => padT + cH - ((v - minV) / rng) * cH;
+    const xOf = i => padL + (i / (n - 1)) * cW;
+    const yOf = v => padT + cH - ((v - minV) / rng) * cH;
 
-    // Kurslinie Pfad
-    const linePath = closes
-      .map((v, i) => `${i === 0 ? "M" : "L"}${xOf(i).toFixed(1)},${yOf(v).toFixed(1)}`)
-      .join(" ");
+    const linePath = closes.map((v, i) => `${i === 0 ? "M" : "L"}${xOf(i).toFixed(1)},${yOf(v).toFixed(1)}`).join(" ");
+    const fillPath = linePath + ` L${xOf(n-1).toFixed(1)},${(padT+cH).toFixed(1)} L${padL},${(padT+cH).toFixed(1)} Z`;
+    const up       = closes[n-1] >= closes[0];
+    const lineClr  = up ? "#22c55e" : "#ef4444";
+    const fillId   = `grad_${this._uid}`;
 
-    // Füllbereich
-    const fillPath = linePath +
-      ` L${xOf(n-1).toFixed(1)},${(padT + cH).toFixed(1)}` +
-      ` L${padL},${(padT + cH).toFixed(1)} Z`;
-
-    // Farbe: grün wenn letzter Kurs > erster
-    const up        = closes[closes.length - 1] >= closes[0];
-    const lineClr   = up ? "#22c55e" : "#ef4444";
-    const fillId    = `grad_${this._uid}`;
-
-    // SMA-Pfade
     const smaPath = (vals, clr) => {
       let d = "", first = true;
       vals.forEach((v, i) => {
@@ -232,31 +216,39 @@ class MyPortfolioChartCard extends HTMLElement {
     };
 
     const trendPath = () => {
-      const d = trendv.map((v, i) =>
-        `${i === 0 ? "M" : "L"}${xOf(i).toFixed(1)},${yOf(v).toFixed(1)}`
-      ).join(" ");
+      const d = trendv.map((v, i) => `${i === 0 ? "M" : "L"}${xOf(i).toFixed(1)},${yOf(v).toFixed(1)}`).join(" ");
       return `<path d="${d}" fill="none" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="6,3" opacity="0.85"/>`;
     };
 
-    const kursZielLine = () => {
+    const kzLine = () => {
       if (!kzVal) return "";
-      const y = yOf(kzVal).toFixed(1);
-      const clr = kzVal > (closes[closes.length-1] || 0) ? "#22c55e" : "#ef4444";
-      return `<line x1="${padL}" y1="${y}" x2="${W - padR}" y2="${y}"
+      const y   = yOf(kzVal).toFixed(1);
+      const clr = kzVal > closes[n-1] ? "#22c55e" : "#ef4444";
+      return `<line x1="${padL}" y1="${y}" x2="${W-padR}" y2="${y}"
                 stroke="${clr}" stroke-width="1.5" stroke-dasharray="8,4" opacity="0.7"/>
-              <text x="${W - padR - 2}" y="${parseFloat(y) - 4}" text-anchor="end"
+              <text x="${W-padR-3}" y="${parseFloat(y)-4}" text-anchor="end"
                 class="axis-lbl" fill="${clr}">KZ ${kzVal.toFixed(2)}</text>`;
     };
 
-    // Y-Achse Labels (5 Stufen)
+    // Kaufkurs-Linie
+    const kaufkurs = parseFloat(_getSensorAttr(this._hass, st.symbol, "preis")) || null;
+    const kaufLine = () => {
+      if (!kaufkurs || kaufkurs < minV || kaufkurs > maxV) return "";
+      const y = yOf(kaufkurs).toFixed(1);
+      return `<line x1="${padL}" y1="${y}" x2="${W-padR}" y2="${y}"
+                stroke="#f59e0b" stroke-width="1" stroke-dasharray="3,3" opacity="0.5"/>
+              <text x="${padL+4}" y="${parseFloat(y)-4}" class="axis-lbl" fill="#f59e0b">Kauf ${kaufkurs.toFixed(2)}</text>`;
+    };
+
+    // Y-Achse
     const yLabels = Array.from({ length: 5 }, (_, i) => {
       const v = minV + (i / 4) * rng;
       const y = yOf(v);
-      return `<text x="${padL - 6}" y="${y + 4}" text-anchor="end" class="axis-lbl">${v.toFixed(2)}</text>
-              <line x1="${padL}" y1="${y}" x2="${W - padR}" y2="${y}" class="grid-line"/>`;
+      return `<text x="${padL-6}" y="${y+4}" text-anchor="end" class="axis-lbl">${v.toFixed(2)}</text>
+              <line x1="${padL}" y1="${y}" x2="${W-padR}" y2="${y}" class="grid-line"/>`;
     });
 
-    // X-Achse: monatliche Labels
+    // X-Achse Monats-Labels
     const months = ["Jan","Feb","Mär","Apr","Mai","Jun","Jul","Aug","Sep","Okt","Nov","Dez"];
     let lastMonth = -1;
     const xLabels = prices.map((p, i) => {
@@ -264,72 +256,187 @@ class MyPortfolioChartCard extends HTMLElement {
       if (m === lastMonth) return "";
       lastMonth = m;
       const x = xOf(i);
-      return `<text x="${x}" y="${padT + cH + 24}" text-anchor="middle" class="axis-lbl">${months[m]}</text>
-              <line x1="${x}" y1="${padT}" x2="${x}" y2="${padT + cH}" class="grid-line-v"/>`;
+      return `<text x="${x}" y="${padT+cH+22}" text-anchor="middle" class="axis-lbl">${months[m]}</text>
+              <line x1="${x}" y1="${padT}" x2="${x}" y2="${padT+cH}" class="grid-line-v"/>`;
     });
 
-    // Tooltip-Overlay (unsichtbare Bereiche für Hover → CSS-only simplified)
-    const lastPx  = xOf(n - 1);
-    const lastPy  = yOf(closes[n - 1]);
-    const lastVal = closes[n - 1].toFixed(2);
+    const lastPx = xOf(n-1), lastPy = yOf(closes[n-1]);
 
     return `
       <svg viewBox="0 0 ${W} ${H}" class="chart-svg" preserveAspectRatio="xMidYMid meet">
         <defs>
           <linearGradient id="${fillId}" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%"   stop-color="${lineClr}" stop-opacity="0.25"/>
+            <stop offset="0%"   stop-color="${lineClr}" stop-opacity="0.22"/>
             <stop offset="100%" stop-color="${lineClr}" stop-opacity="0.02"/>
           </linearGradient>
         </defs>
-
-        <!-- Grid -->
         ${yLabels.join("")}
         ${xLabels.join("")}
-
-        <!-- Füllbereich -->
         <path d="${fillPath}" fill="url(#${fillId})"/>
-
-        <!-- Kurslinie -->
-        <path d="${linePath}" fill="none" stroke="${lineClr}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
-
-        <!-- Indikatoren -->
+        ${kaufLine()}
+        <path d="${linePath}" fill="none" stroke="${lineClr}" stroke-width="2"
+              stroke-linejoin="round" stroke-linecap="round"/>
         ${st.sma100 ? smaPath(sma100v, "#60a5fa") : ""}
         ${st.sma200 ? smaPath(sma200v, "#a78bfa") : ""}
         ${st.trend  ? trendPath()                 : ""}
-        ${st.kursziel ? kursZielLine() : ""}
-
-        <!-- Letzter Kurs Punkt + Label -->
+        ${st.kursziel ? kzLine()                  : ""}
         <circle cx="${lastPx}" cy="${lastPy}" r="4" fill="${lineClr}" stroke="#1c1c27" stroke-width="2"/>
-        <rect x="${lastPx - 28}" y="${lastPy - 22}" width="56" height="16" rx="4"
+        <rect x="${lastPx-28}" y="${lastPy-22}" width="56" height="16" rx="4"
               fill="${lineClr}" opacity="0.15"/>
-        <text x="${lastPx}" y="${lastPy - 11}" text-anchor="middle"
-              class="price-lbl" fill="${lineClr}">${lastVal}</text>
+        <text x="${lastPx}" y="${lastPy-11}" text-anchor="middle"
+              class="price-lbl" fill="${lineClr}">${closes[n-1].toFixed(2)}</text>
       </svg>`;
   }
 
-  // ── Render ───────────────────────────────────────────────────────────────
+  // ── Kennzahlen-Panel ─────────────────────────────────────────────────────
 
-  async _loadAndRender() {
-    const st = this._st;
-    if (!st.symbol || this._loading) return;
-    this._loading = true;
-    this._render(); // zeigt Spinner
-    // ISIN aus HA-Sensor lesen (für ING-Quelle)
-    let isin = null;
-    if (this._hass) {
-      for (const [, state] of Object.entries(this._hass.states)) {
-        const a = state.attributes || {};
-        if (a.kuerzel === st.symbol && a.summary_key === undefined && a.isin) {
-          isin = a.isin;
-          break;
-        }
+  _buildInfoPanel(prices) {
+    const sym   = this._st.symbol;
+    const fmt   = (v, d=2) => v != null && !isNaN(v)
+      ? Number(v).toLocaleString("de-DE", {minimumFractionDigits:d, maximumFractionDigits:d})
+      : "–";
+    const sign  = v => (v != null && !isNaN(v) && v >= 0) ? "+" : "";
+    const pct   = v => v != null ? `${sign(v)}${fmt(v)}%` : "–";
+
+    // Aus HA-Sensor
+    const kurs     = parseFloat(_getSensorAttr(this._hass, sym, "aktueller_kurs"));
+    const kaufkurs = parseFloat(_getSensorAttr(this._hass, sym, "preis"));
+    const stueck   = parseFloat(_getSensorAttr(this._hass, sym, "stueckzahl"));
+    const gewinn   = parseFloat(_getSensorAttr(this._hass, sym, "gewinn"));
+    const tgAbs    = parseFloat(_getSensorAttr(this._hass, sym, "tages_aenderung_abs"));
+    const tgPct    = parseFloat(_getSensorAttr(this._hass, sym, "tages_aenderung_pct"));
+    const kzMittel = parseFloat(_getSensorAttr(this._hass, sym, "kursziel_mittel"));
+    const kzHoch   = parseFloat(_getSensorAttr(this._hass, sym, "kursziel_hoch"));
+    const kzTief   = parseFloat(_getSensorAttr(this._hass, sym, "kursziel_tief"));
+    const konsens  = _getSensorAttr(this._hass, sym, "analysten_konsens");
+    const anzahl   = _getSensorAttr(this._hass, sym, "analysten_anzahl");
+
+    // Aus Kursverlauf berechnen
+    let w52h = null, w52t = null;
+    let sma100last = null, sma200last = null;
+    let sma100dist = null, sma200dist = null;
+
+    if (prices && prices.length > 1) {
+      const closes = prices.map(p => p.close).filter(v => v != null);
+      const highs  = prices.map(p => p.high  || p.close).filter(v => v != null);
+      const lows   = prices.map(p => p.low   || p.close).filter(v => v != null);
+      w52h = Math.max(...highs);
+      w52t = Math.min(...lows);
+
+      const sma100v = this._sma(prices, 100);
+      const sma200v = this._sma(prices, 200);
+      const last100 = [...sma100v].reverse().find(v => v !== null);
+      const last200 = [...sma200v].reverse().find(v => v !== null);
+      if (last100 && !isNaN(kurs)) {
+        sma100last = last100;
+        sma100dist = ((kurs - last100) / last100) * 100;
+      }
+      if (last200 && !isNaN(kurs)) {
+        sma200last = last200;
+        sma200dist = ((kurs - last200) / last200) * 100;
       }
     }
-    const prices = await this._fetchHistory(st.symbol, isin);
-    this._prices  = prices;
+
+    const upside = (!isNaN(kurs) && !isNaN(kzMittel) && kurs > 0)
+      ? ((kzMittel - kurs) / kurs) * 100 : null;
+
+    // Kursgewinn seit Kauf absolut
+    const gesamtGewinnAbs = (!isNaN(kurs) && !isNaN(kaufkurs) && !isNaN(stueck))
+      ? (kurs - kaufkurs) * stueck : null;
+
+    const tgClr   = (!isNaN(tgPct) && tgPct >= 0) ? "#22c55e" : "#ef4444";
+    const gwClr   = (!isNaN(gewinn) && gewinn >= 0) ? "#22c55e" : "#ef4444";
+    const konsensClr = konsens
+      ? (konsens.toLowerCase().includes("buy") ? "#22c55e"
+       : konsens.toLowerCase().includes("sell") ? "#ef4444" : "#f59e0b")
+      : "var(--secondary-text-color)";
+
+    const row = (label, value, color = "var(--primary-text-color)", sub = null) => `
+      <div class="kz-row">
+        <span class="kz-label">${label}</span>
+        <span class="kz-value" style="color:${color}">${value}${sub ? `<span class="kz-sub">${sub}</span>` : ""}</span>
+      </div>`;
+
+    const divider = () => `<div class="kz-divider"></div>`;
+
+    return `
+      <div class="info-panel">
+
+        <div class="info-section">
+          <div class="info-sec-title">Kurs</div>
+          ${row("Aktuell", `${fmt(kurs, 3)} €`,
+            (!isNaN(tgPct) && tgPct >= 0) ? "#22c55e" : "#ef4444")}
+          ${row("Tagesänderung",
+            `${sign(tgAbs)}${fmt(tgAbs, 3)} € (${sign(tgPct)}${fmt(tgPct)}%)`, tgClr)}
+          ${row("Kaufkurs", `${fmt(kaufkurs, 3)} €`)}
+          ${row("Gewinn/Verlust", `${sign(gesamtGewinnAbs)}${fmt(gesamtGewinnAbs)} € (${pct(gewinn)})`, gwClr)}
+        </div>
+
+        ${divider()}
+
+        <div class="info-section">
+          <div class="info-sec-title">52-Wochen</div>
+          ${row("52W Hoch", `${fmt(w52h, 3)} €`, "#22c55e")}
+          ${row("52W Tief", `${fmt(w52t, 3)} €`, "#ef4444")}
+          ${w52h != null && w52t != null && !isNaN(kurs) ? row("Position",
+            (() => {
+              const r = w52h - w52t;
+              const p = r > 0 ? ((kurs - w52t) / r) * 100 : null;
+              return p != null ? `${fmt(p)}% über Tief` : "–";
+            })()
+          ) : ""}
+        </div>
+
+        ${divider()}
+
+        <div class="info-section">
+          <div class="info-sec-title">Gleitende Durchschnitte</div>
+          ${row("SMA 100",
+            sma100last != null ? `${fmt(sma100last, 2)} €` : "–",
+            "var(--primary-text-color)",
+            sma100dist != null
+              ? `&nbsp;<span style="color:${sma100dist>=0?"#22c55e":"#ef4444"};font-size:.75rem">${sign(sma100dist)}${fmt(sma100dist)}%</span>`
+              : null
+          )}
+          ${row("SMA 200",
+            sma200last != null ? `${fmt(sma200last, 2)} €` : "–",
+            "var(--primary-text-color)",
+            sma200dist != null
+              ? `&nbsp;<span style="color:${sma200dist>=0?"#22c55e":"#ef4444"};font-size:.75rem">${sign(sma200dist)}${fmt(sma200dist)}%</span>`
+              : null
+          )}
+        </div>
+
+        ${divider()}
+
+        <div class="info-section">
+          <div class="info-sec-title">Analysten${anzahl ? ` (${anzahl})` : ""}</div>
+          ${row("Konsens",
+            konsens || "–", konsensClr)}
+          ${row("Kursziel Ø", kzMittel != null ? `${fmt(kzMittel)} €` : "–")}
+          ${row("Kursziel Hoch", kzHoch != null ? `${fmt(kzHoch)} €` : "–", "#22c55e")}
+          ${row("Kursziel Tief", kzTief != null ? `${fmt(kzTief)} €` : "–", "#ef4444")}
+          ${row("Upside", upside != null ? `${sign(upside)}${fmt(upside)}%` : "–",
+            upside != null ? (upside >= 0 ? "#22c55e" : "#ef4444") : "var(--secondary-text-color)")}
+        </div>
+
+      </div>`;
+  }
+
+  // ── Lade-Logik ───────────────────────────────────────────────────────────
+
+  async _loadAndRender() {
+    const st   = this._st;
+    const isin = this._currentIsin();
+    if (!st.symbol || this._loading) return;
+    this._loading = true;
+    this._render();
+    this._prices = await this._fetchHistory(st.symbol, isin);
     this._loading = false;
     this._render();
   }
+
+  // ── Render ───────────────────────────────────────────────────────────────
 
   _render() {
     if (!this._hass || !_chartState.has(this._uid)) return;
@@ -341,13 +448,16 @@ class MyPortfolioChartCard extends HTMLElement {
     const stocks     = this._stocksForPortfolio(curPort);
     const curSym     = st.symbol || stocks[0]?.kuerzel || "";
     const curStock   = stocks.find(s => s.kuerzel === curSym) || stocks[0];
+    const isin       = curStock?.isin || null;
 
     const btn = (active, label, id) =>
       `<button class="ind-btn${active ? " active" : ""}"
          onclick="this.getRootNode().host._toggle('${id}')">${label}</button>`;
 
+    // Kursziel-Button nur zeigen wenn Daten vorhanden
+    const kzVal = _getSensorAttr(this._hass, curSym, "kursziel_mittel");
+
     // Chart-Inhalt
-    // Datenladen NUR anstoßen wenn Symbol sich geändert hat, nicht bei jedem hass-Update
     let chartContent;
     if (this._loadedSymbol !== curSym && !this._loading) {
       this._loadedSymbol = curSym;
@@ -365,239 +475,126 @@ class MyPortfolioChartCard extends HTMLElement {
     // Legende
     const legend = `
       <div class="legend">
-        <span class="leg-item"><span class="leg-dot" style="background:#22c55e"></span>Kurs</span>
+        <span class="leg-item"><span class="leg-dot" style="background:#aaa"></span>Kurs</span>
+        <span class="leg-item"><span class="leg-dash" style="border-color:#f59e0b"></span>Kaufkurs</span>
         ${st.sma100 ? `<span class="leg-item"><span class="leg-dash" style="border-color:#60a5fa"></span>SMA 100</span>` : ""}
         ${st.sma200 ? `<span class="leg-item"><span class="leg-dash" style="border-color:#a78bfa"></span>SMA 200</span>` : ""}
         ${st.trend  ? `<span class="leg-item"><span class="leg-dash" style="border-color:#f59e0b"></span>Trend</span>` : ""}
-        ${st.kursziel ? `<span class="leg-item"><span class="leg-dash" style="border-color:#22c55e"></span>Ø Kursziel</span>` : ""}
+        ${st.kursziel && kzVal ? `<span class="leg-item"><span class="leg-dash" style="border-color:#22c55e"></span>KZ Ø</span>` : ""}
       </div>`;
+
+    // Info-Panel
+    const infoPanel = this._buildInfoPanel(this._prices);
 
     this.shadowRoot.innerHTML = `
       <style>
         @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Outfit:wght@400;600;700&display=swap');
-        :host { display: block; }
-        ha-card {
-          background: var(--ha-card-background, var(--card-background-color, #1c1c27));
-          border-radius: 16px;
-          overflow: hidden;
-          font-family: 'Outfit', sans-serif;
-          padding-bottom: .8rem;
+        :host{display:block}
+        ha-card{
+          background:var(--ha-card-background,var(--card-background-color,#1c1c27));
+          border-radius:16px;overflow:hidden;font-family:'Outfit',sans-serif;padding-bottom:.8rem
         }
-        /* ── Header ── */
-        .header {
-          padding: 1.3rem 1.6rem .5rem;
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          flex-wrap: wrap;
-          gap: .6rem;
+        /* Header */
+        .header{padding:1.2rem 1.6rem .3rem;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.5rem}
+        .hdr-title{font-size:1.05rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--secondary-text-color)}
+        .hdr-name{font-size:1.1rem;font-weight:600;color:var(--primary-text-color);font-family:'DM Mono',monospace}
+        /* Selects */
+        .selects{display:flex;gap:.6rem;padding:0 1.6rem .4rem;flex-wrap:wrap;align-items:center}
+        .sel-label{font-size:.75rem;color:var(--secondary-text-color);font-family:'DM Mono',monospace;flex-shrink:0}
+        select{font-size:.82rem;font-family:'Outfit',sans-serif;padding:.28rem .7rem;border-radius:8px;
+          border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.07);color:var(--primary-text-color);
+          cursor:pointer;outline:none;appearance:none;-webkit-appearance:none;
+          background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%236b7280'/%3E%3C/svg%3E");
+          background-repeat:no-repeat;background-position:right .5rem center;background-size:.6rem;padding-right:1.6rem}
+        select:focus{border-color:#3b82f6}
+        /* Indikator-Buttons */
+        .indicators{display:flex;gap:.4rem;padding:0 1.6rem .5rem;flex-wrap:wrap}
+        .ind-label{font-size:.75rem;color:var(--secondary-text-color);font-family:'DM Mono',monospace;align-self:center;flex-shrink:0;margin-right:.2rem}
+        .ind-btn{font-size:.75rem;font-family:'DM Mono',monospace;padding:.25rem .65rem;border-radius:6px;
+          border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.05);color:var(--secondary-text-color);
+          cursor:pointer;transition:all .15s;user-select:none}
+        .ind-btn:hover{background:rgba(255,255,255,.1);color:var(--primary-text-color)}
+        .ind-btn.active{font-weight:700;border-width:1.5px}
+        .ind-btn:nth-child(2).active{background:rgba(96,165,250,.2);border-color:#60a5fa;color:#93c5fd}
+        .ind-btn:nth-child(3).active{background:rgba(167,139,250,.2);border-color:#a78bfa;color:#c4b5fd}
+        .ind-btn:nth-child(4).active{background:rgba(245,158,11,.2);border-color:#f59e0b;color:#fcd34d}
+        .ind-btn:nth-child(5).active{background:rgba(34,197,94,.2);border-color:#22c55e;color:#86efac}
+        /* Haupt-Layout: Chart + Info nebeneinander */
+        .main-layout{display:flex;gap:0;align-items:flex-start}
+        /* Chart */
+        .chart-wrap{flex:1;min-width:0;padding:0 .6rem 0 1rem}
+        .chart-svg{width:100%;height:auto;display:block}
+        .axis-lbl{font-family:'DM Mono',monospace;font-size:10px;fill:rgba(255,255,255,.35)}
+        .grid-line{stroke:rgba(255,255,255,.06);stroke-width:1}
+        .grid-line-v{stroke:rgba(255,255,255,.04);stroke-width:1}
+        .price-lbl{font-family:'DM Mono',monospace;font-size:11px;font-weight:500}
+        .no-data{height:200px;display:flex;align-items:center;justify-content:center;
+          color:var(--secondary-text-color);font-family:'DM Mono',monospace;font-size:.9rem}
+        /* Spinner */
+        .loading{height:220px;display:flex;flex-direction:column;align-items:center;justify-content:center;
+          gap:1rem;color:var(--secondary-text-color);font-family:'DM Mono',monospace;font-size:.85rem}
+        .spinner{width:2rem;height:2rem;border:2px solid rgba(255,255,255,.1);border-top-color:#3b82f6;
+          border-radius:50%;animation:spin .7s linear infinite}
+        @keyframes spin{to{transform:rotate(360deg)}}
+        /* Info-Panel */
+        .info-panel{
+          width:200px;flex-shrink:0;padding:.4rem 1.2rem .4rem .4rem;
+          display:flex;flex-direction:column;gap:0
         }
-        .hdr-title {
-          font-size: 1.05rem;
-          font-weight: 700;
-          letter-spacing: .12em;
-          text-transform: uppercase;
-          color: var(--secondary-text-color);
-        }
-        .hdr-price {
-          font-family: 'DM Mono', monospace;
-          font-size: 1.3rem;
-          font-weight: 500;
-          color: var(--primary-text-color);
-        }
-        /* ── Selects ── */
-        .selects {
-          display: flex;
-          gap: .6rem;
-          padding: 0 1.6rem .5rem;
-          flex-wrap: wrap;
-          align-items: center;
-        }
-        .sel-label {
-          font-size: .75rem;
-          color: var(--secondary-text-color);
-          font-family: 'DM Mono', monospace;
-          flex-shrink: 0;
-        }
-        select {
-          font-size: .82rem;
-          font-family: 'Outfit', sans-serif;
-          padding: .3rem .7rem;
-          border-radius: 8px;
-          border: 1px solid rgba(255,255,255,.15);
-          background: rgba(255,255,255,.07);
-          color: var(--primary-text-color);
-          cursor: pointer;
-          outline: none;
-          appearance: none;
-          -webkit-appearance: none;
-          background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%236b7280'/%3E%3C/svg%3E");
-          background-repeat: no-repeat;
-          background-position: right .5rem center;
-          background-size: .6rem;
-          padding-right: 1.6rem;
-        }
-        select:focus { border-color: #3b82f6; }
-        /* ── Indikator-Buttons ── */
-        .indicators {
-          display: flex;
-          gap: .4rem;
-          padding: 0 1.6rem .6rem;
-          flex-wrap: wrap;
-        }
-        .ind-label {
-          font-size: .75rem;
-          color: var(--secondary-text-color);
-          font-family: 'DM Mono', monospace;
-          align-self: center;
-          flex-shrink: 0;
-          margin-right: .2rem;
-        }
-        .ind-btn {
-          font-size: .75rem;
-          font-family: 'DM Mono', monospace;
-          padding: .25rem .65rem;
-          border-radius: 6px;
-          border: 1px solid rgba(255,255,255,.12);
-          background: rgba(255,255,255,.05);
-          color: var(--secondary-text-color);
-          cursor: pointer;
-          transition: all .15s;
-          user-select: none;
-        }
-        .ind-btn:hover { background:rgba(255,255,255,.1); color:var(--primary-text-color); }
-        .ind-btn.active {
-          font-weight: 700;
-          border-width: 1.5px;
-        }
-        .ind-btn:nth-child(2).active { background:rgba(96,165,250,.2);  border-color:#60a5fa; color:#93c5fd; }
-        .ind-btn:nth-child(3).active { background:rgba(167,139,250,.2); border-color:#a78bfa; color:#c4b5fd; }
-        .ind-btn:nth-child(4).active { background:rgba(245,158,11,.2);  border-color:#f59e0b; color:#fcd34d; }
-        /* ── Chart ── */
-        .chart-wrap {
-          padding: 0 1.0rem;
-          position: relative;
-        }
-        .chart-svg {
-          width: 100%;
-          height: auto;
-          display: block;
-        }
-        .axis-lbl {
-          font-family: 'DM Mono', monospace;
-          font-size: 10px;
-          fill: rgba(255,255,255,.35);
-        }
-        .grid-line {
-          stroke: rgba(255,255,255,.06);
-          stroke-width: 1;
-        }
-        .grid-line-v {
-          stroke: rgba(255,255,255,.04);
-          stroke-width: 1;
-        }
-        .price-lbl {
-          font-family: 'DM Mono', monospace;
-          font-size: 11px;
-          font-weight: 500;
-        }
-        .no-data {
-          height: 200px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          color: var(--secondary-text-color);
-          font-family: 'DM Mono', monospace;
-          font-size: .9rem;
-        }
-        /* ── Spinner ── */
-        .loading {
-          height: 220px;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          gap: 1rem;
-          color: var(--secondary-text-color);
-          font-family: 'DM Mono', monospace;
-          font-size: .85rem;
-        }
-        .spinner {
-          width: 2rem;
-          height: 2rem;
-          border: 2px solid rgba(255,255,255,.1);
-          border-top-color: #3b82f6;
-          border-radius: 50%;
-          animation: spin .7s linear infinite;
-        }
-        @keyframes spin { to { transform:rotate(360deg); } }
-        /* ── Legende ── */
-        .legend {
-          display: flex;
-          gap: 1rem;
-          padding: .5rem 1.6rem 0;
-          flex-wrap: wrap;
-        }
-        .leg-item {
-          display: flex;
-          align-items: center;
-          gap: .35rem;
-          font-size: .75rem;
-          color: var(--secondary-text-color);
-          font-family: 'DM Mono', monospace;
-        }
-        .leg-dot {
-          width: 8px; height: 8px;
-          border-radius: 50%;
-          flex-shrink: 0;
-        }
-        .leg-dash {
-          width: 18px; height: 0;
-          border-bottom: 2px dashed;
-          flex-shrink: 0;
-        }
+        .info-section{padding:.3rem 0}
+        .info-sec-title{font-size:.65rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;
+          color:var(--secondary-text-color);margin-bottom:.3rem;padding-bottom:.2rem;
+          border-bottom:1px solid rgba(255,255,255,.06)}
+        .kz-row{display:flex;justify-content:space-between;align-items:baseline;
+          gap:.4rem;padding:.12rem 0}
+        .kz-label{font-size:.72rem;color:var(--secondary-text-color);font-family:'Outfit',sans-serif;
+          flex-shrink:0;white-space:nowrap}
+        .kz-value{font-size:.78rem;font-family:'DM Mono',monospace;font-weight:500;
+          text-align:right;white-space:nowrap}
+        .kz-sub{font-size:.68rem}
+        .kz-divider{height:1px;background:rgba(255,255,255,.05);margin:.1rem 0}
+        /* Legende */
+        .legend{display:flex;gap:1rem;padding:.4rem 1.6rem 0;flex-wrap:wrap}
+        .leg-item{display:flex;align-items:center;gap:.35rem;font-size:.72rem;
+          color:var(--secondary-text-color);font-family:'DM Mono',monospace}
+        .leg-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+        .leg-dash{width:18px;height:0;border-bottom:2px dashed;flex-shrink:0}
       </style>
       <ha-card>
         <div class="header">
           <div class="hdr-title">${title}</div>
-          ${curStock ? `<div class="hdr-price">${curStock.bezeichnung}</div>` : ""}
+          ${curStock ? `<div class="hdr-name">${curStock.bezeichnung}${isin ? ` <span style="opacity:.4;font-size:.75rem">${isin}</span>` : ""}</div>` : ""}
         </div>
 
-        <!-- Auswahl Portfolio + Aktie -->
         <div class="selects">
           <span class="sel-label">Portfolio:</span>
           <select onchange="this.getRootNode().host._selectPortfolio(this.value)">
-            ${portfolios.map(p =>
-              `<option value="${p}" ${p === curPort ? "selected" : ""}>${p}</option>`
-            ).join("")}
+            ${portfolios.map(p => `<option value="${p}" ${p===curPort?"selected":""}>${p}</option>`).join("")}
           </select>
           <span class="sel-label">Aktie:</span>
           <select onchange="this.getRootNode().host._selectSymbol(this.value)">
-            ${stocks.map(s =>
-              `<option value="${s.kuerzel}" ${s.kuerzel === curSym ? "selected" : ""}>${s.bezeichnung} (${s.kuerzel})</option>`
-            ).join("")}
+            ${stocks.map(s => `<option value="${s.kuerzel}" ${s.kuerzel===curSym?"selected":""}>${s.bezeichnung} (${s.kuerzel})</option>`).join("")}
           </select>
         </div>
 
-        <!-- Indikator-Buttons -->
         <div class="indicators">
           <span class="ind-label">Indikatoren:</span>
-          ${btn(st.sma100, "100-Tage Ø", "sma100")}
-          ${btn(st.sma200, "200-Tage Ø", "sma200")}
-          ${btn(st.trend,  "Trendlinie", "trend")}
+          ${btn(st.sma100, "SMA 100", "sma100")}
+          ${btn(st.sma200, "SMA 200", "sma200")}
+          ${btn(st.trend,  "Trend",   "trend")}
+          ${kzVal ? btn(st.kursziel, "Kursziel", "kursziel") : ""}
         </div>
 
-        <!-- Chart -->
-        <div class="chart-wrap">
-          ${chartContent}
+        <div class="main-layout">
+          <div class="chart-wrap">${chartContent}</div>
+          ${infoPanel}
         </div>
 
-        <!-- Legende -->
         ${legend}
       </ha-card>`;
   }
 
-  // ── Event Handler ────────────────────────────────────────────────────────
+  // ── Event Handler ─────────────────────────────────────────────────────────
 
   _selectPortfolio(portfolio) {
     this._set("portfolio", portfolio);
@@ -605,7 +602,7 @@ class MyPortfolioChartCard extends HTMLElement {
     if (stocks.length > 0) {
       this._set("symbol", stocks[0].kuerzel);
       this._loadedSymbol = null;
-      this._prices     = null;
+      this._prices       = null;
     }
     this._render();
   }
@@ -613,7 +610,7 @@ class MyPortfolioChartCard extends HTMLElement {
   _selectSymbol(symbol) {
     this._set("symbol", symbol);
     this._loadedSymbol = null;
-    this._prices     = null;
+    this._prices       = null;
     this._render();
   }
 
@@ -622,7 +619,7 @@ class MyPortfolioChartCard extends HTMLElement {
     this._render();
   }
 
-  getCardSize() { return 8; }
+  getCardSize() { return 9; }
   static getStubConfig() { return { title: "Kursverlauf" }; }
 }
 
@@ -631,18 +628,5 @@ window.customCards = window.customCards || [];
 window.customCards.push({
   type:        "my-portfolio-chart-card",
   name:        "Portfolio Kursverlauf",
-  description: "Grafischer Kursverlauf einer Aktie mit SMA 100/200 und Trendlinie.",
+  description: "Jahreschart mit Kennzahlen-Panel (52W, SMA-Abstände, Analysten)",
 });
-
-// Hilfsfunktion: Ø-Kursziel für ein Symbol aus HA-States
-function _getKursziel(hass, symbol) {
-  if (!hass || !symbol) return null;
-  for (const [, state] of Object.entries(hass.states)) {
-    const attr = state.attributes || {};
-    if (attr.kuerzel === symbol && attr.summary_key === undefined) {
-      const kz = parseFloat(attr.kursziel_mittel);
-      return isNaN(kz) ? null : kz;
-    }
-  }
-  return null;
-}
