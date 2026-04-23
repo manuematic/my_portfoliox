@@ -111,6 +111,15 @@ def _current_options(config_entry) -> dict:
 
 # ── Config Flow (Ersteinrichtung) ─────────────────────────────────────────────
 
+def _get_coordinators(hass, entry_id):
+    """Gibt (coordinator, candidate_coordinator) zurück – kompatibel mit alt und neu."""
+    entry_data = hass.data.get("my_portfolio", {}).get(entry_id)
+    if isinstance(entry_data, dict):
+        return entry_data.get("coordinator"), entry_data.get("candidate_coordinator")
+    # Altes Format: entry_data ist direkt der Coordinator
+    return entry_data, None
+
+
 class MyPortfolioConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Erstellt ein neues Portfolio."""
 
@@ -459,7 +468,7 @@ class MyPortfolioOptionsFlow(config_entries.OptionsFlow):
                 errors[ATTR_KUERZEL] = "invalid_kuerzel"
             else:
                 from .candidate_coordinator import CandidateCoordinator
-                coordinator = self.hass.data[DOMAIN].get(self.config_entry.entry_id, {}).get("candidate_coordinator")
+                _, coordinator = _get_coordinators(self.hass, self.config_entry.entry_id)
                 if coordinator:
                     await coordinator.async_add_candidate({
                         ATTR_BEZEICHNUNG:    str(user_input.get(ATTR_BEZEICHNUNG, "")).strip(),
@@ -482,7 +491,7 @@ class MyPortfolioOptionsFlow(config_entries.OptionsFlow):
         """Kandidat auswählen zum Bearbeiten/Löschen."""
         from homeassistant.helpers.selector import selector as sel
         from .candidate_coordinator import CandidateCoordinator
-        coordinator = self.hass.data[DOMAIN].get(self.config_entry.entry_id, {}).get("candidate_coordinator")
+        _, coordinator = _get_coordinators(self.hass, self.config_entry.entry_id)
         candidates  = coordinator.get_candidates() if coordinator else {}
 
         if not candidates:
@@ -516,7 +525,7 @@ class MyPortfolioOptionsFlow(config_entries.OptionsFlow):
     async def async_step_edit_candidate(self, user_input=None):
         """Kaufkandidaten bearbeiten."""
         from .candidate_coordinator import CandidateCoordinator
-        coordinator = self.hass.data[DOMAIN].get(self.config_entry.entry_id, {}).get("candidate_coordinator")
+        _, coordinator = _get_coordinators(self.hass, self.config_entry.entry_id)
         cand = coordinator.get_candidates().get(self._selected_candidate_id, {}) if coordinator else {}
         errors = {}
 
@@ -550,7 +559,7 @@ class MyPortfolioOptionsFlow(config_entries.OptionsFlow):
     async def async_step_confirm_delete_candidate(self, user_input=None):
         """Löschen eines Kaufkandidaten bestätigen."""
         from .candidate_coordinator import CandidateCoordinator
-        coordinator = self.hass.data[DOMAIN].get(self.config_entry.entry_id, {}).get("candidate_coordinator")
+        _, coordinator = _get_coordinators(self.hass, self.config_entry.entry_id)
         cand = coordinator.get_candidates().get(self._selected_candidate_id, {}) if coordinator else {}
 
         if user_input is not None:
