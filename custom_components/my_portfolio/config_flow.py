@@ -102,8 +102,6 @@ def _current_options(config_entry) -> dict:
         ),
         CONF_FMP_API_KEY: config_entry.options.get(
             CONF_FMP_API_KEY,
-    ATTR_ZIELKURS,
-    ATTR_KANDIDAT_NOTIZ,
             config_entry.data.get(CONF_FMP_API_KEY, ""),
         ),
     }
