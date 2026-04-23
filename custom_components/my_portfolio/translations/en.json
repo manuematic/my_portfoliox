@@ -87,6 +87,50 @@
           "scan_interval": "Update Interval (minutes)",
           "fmp_api_key": "FMP API Key (optional, for analyst price targets)"
         }
+      },
+      "candidates": {
+        "title": "Manage buy candidates",
+        "data": {
+          "action": "Action"
+        }
+      },
+      "add_candidate": {
+        "title": "Add buy candidate",
+        "data": {
+          "bezeichnung": "Name",
+          "kuerzel": "Ticker (Yahoo)",
+          "wkn": "WKN",
+          "isin": "ISIN (required for ING)",
+          "datenquelle": "Data source",
+          "zielkurs": "Target price (€)",
+          "notiz": "Note (optional)"
+        }
+      },
+      "select_candidate": {
+        "title": "Select candidate",
+        "data": {
+          "candidate_id": "Candidate",
+          "action": "Action"
+        }
+      },
+      "edit_candidate": {
+        "title": "Edit candidate",
+        "data": {
+          "bezeichnung": "Name",
+          "kuerzel": "Ticker (Yahoo)",
+          "wkn": "WKN",
+          "isin": "ISIN",
+          "datenquelle": "Data source",
+          "zielkurs": "Target price (€)",
+          "notiz": "Note (optional)"
+        }
+      },
+      "confirm_delete_candidate": {
+        "title": "Delete candidate",
+        "description": "Really delete '{name}'?",
+        "data": {
+          "confirm": "Yes, delete"
+        }
       }
     },
     "error": {

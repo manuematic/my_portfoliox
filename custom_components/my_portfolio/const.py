@@ -76,3 +76,9 @@ ATTR_KZ_MITTEL    = "kursziel_mittel"
 ATTR_KZ_ANZAHL    = "analysten_anzahl"
 ATTR_KZ_KONSENS   = "analysten_konsens"   # buy / hold / sell
 ATTR_KZ_DATUM     = "kursziel_datum"
+
+# Kaufkandidaten
+STORAGE_KEY_CANDIDATES = "my_portfolio.candidates"
+ATTR_ZIELKURS          = "zielkurs"
+ATTR_KAUFSIGNAL        = "kaufsignal"   # boolean: kurs <= zielkurs
+ATTR_KANDIDAT_NOTIZ    = "notiz"

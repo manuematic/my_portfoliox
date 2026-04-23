@@ -14,6 +14,8 @@ from .const import (
     CONF_SCAN_INTERVAL,
     CONF_DATA_SOURCE,
     CONF_FMP_API_KEY,
+    ATTR_ZIELKURS,
+    ATTR_KANDIDAT_NOTIZ,
     DEFAULT_SCAN_INTERVAL,
     DEFAULT_SOURCE,
     SOURCE_ING,
@@ -100,6 +102,8 @@ def _current_options(config_entry) -> dict:
         ),
         CONF_FMP_API_KEY: config_entry.options.get(
             CONF_FMP_API_KEY,
+    ATTR_ZIELKURS,
+    ATTR_KANDIDAT_NOTIZ,
             config_entry.data.get(CONF_FMP_API_KEY, ""),
         ),
     }
@@ -186,12 +190,15 @@ class MyPortfolioOptionsFlow(config_entries.OptionsFlow):
                 return await self.async_step_add_stock()
             if action == "edit":
                 return await self.async_step_select_stock()
+            if action == "candidates":
+                return await self.async_step_candidates()
             if action == "settings":
                 return await self.async_step_settings()
 
         actions = [selector.SelectOptionDict(value="add", label="➕ Aktie hinzufügen")]
         if stocks:
             actions.append(selector.SelectOptionDict(value="edit", label="✏️  Aktie bearbeiten / löschen"))
+        actions.append(selector.SelectOptionDict(value="candidates", label="📋  Kaufkandidaten"))
         actions.append(selector.SelectOptionDict(value="settings", label="⚙️  Einstellungen"))
 
         return self.async_show_form(
@@ -387,3 +394,175 @@ class MyPortfolioOptionsFlow(config_entries.OptionsFlow):
             ATTR_LIMIT_OBEN:     round(float(limit_oben), 3) if limit_oben else None,
             ATTR_LIMIT_UNTEN:    round(float(limit_unten), 3) if limit_unten else None,
         }
+
+    async def async_step_candidates(self, user_input=None):
+        """Kaufkandidaten-Menü."""
+        from homeassistant.helpers.selector import selector as sel
+        errors = {}
+        if user_input is not None:
+            action = user_input.get("action")
+            if action == "add":
+                return await self.async_step_add_candidate()
+            if action == "edit":
+                return await self.async_step_select_candidate()
+            return await self.async_step_init()
+
+        return self.async_show_form(
+            step_id="candidates",
+            data_schema=vol.Schema({
+                vol.Required("action", default="add"): sel({
+                    "select": {
+                        "options": [
+                            {"value": "add",  "label": "➕ Kandidat hinzufügen"},
+                            {"value": "edit", "label": "✏️ Kandidat bearbeiten / löschen"},
+                            {"value": "back", "label": "← Zurück"},
+                        ],
+                        "mode": "list",
+                    }
+                }),
+            }),
+            errors=errors,
+        )
+
+    def _candidate_schema(self, d: dict = {}):
+        from homeassistant.helpers.selector import selector as sel
+        return vol.Schema({
+            vol.Required(ATTR_BEZEICHNUNG, default=d.get(ATTR_BEZEICHNUNG, "")): sel({"text": {}}),
+            vol.Required(ATTR_KUERZEL,     default=d.get(ATTR_KUERZEL, "")): sel({"text": {}}),
+            vol.Optional(ATTR_WKN,         default=d.get(ATTR_WKN, "")): sel({"text": {}}),
+            vol.Optional(ATTR_ISIN,        default=d.get(ATTR_ISIN, "")): sel({"text": {}}),
+            vol.Required("datenquelle",    default=d.get("datenquelle", SOURCE_ING)): sel({
+                "select": {
+                    "options": [
+                        {"value": SOURCE_ING,   "label": "ING (via ISIN)"},
+                        {"value": SOURCE_YAHOO, "label": "Yahoo Finance (via Kürzel)"},
+                    ],
+                    "mode": "list",
+                }
+            }),
+            vol.Required(ATTR_ZIELKURS,    default=d.get(ATTR_ZIELKURS, 0.0)): sel({
+                "number": {"min": 0.01, "max": 100000, "step": 0.001, "mode": "box"}
+            }),
+            vol.Optional(ATTR_KANDIDAT_NOTIZ, default=d.get(ATTR_KANDIDAT_NOTIZ, "")): sel({"text": {}}),
+        })
+
+    async def async_step_add_candidate(self, user_input=None):
+        """Neuen Kaufkandidaten hinzufügen."""
+        errors = {}
+        if user_input is not None:
+            quelle  = user_input.get("datenquelle", SOURCE_ING)
+            isin    = str(user_input.get(ATTR_ISIN, "")).strip().upper()
+            kuerzel = str(user_input.get(ATTR_KUERZEL, "")).strip().upper()
+            if quelle == SOURCE_ING and not isin:
+                errors[ATTR_ISIN] = "isin_required"
+            elif not kuerzel:
+                errors[ATTR_KUERZEL] = "invalid_kuerzel"
+            else:
+                from .candidate_coordinator import CandidateCoordinator
+                coordinator = self.hass.data[DOMAIN].get(self.config_entry.entry_id, {}).get("candidate_coordinator")
+                if coordinator:
+                    await coordinator.async_add_candidate({
+                        ATTR_BEZEICHNUNG:    str(user_input.get(ATTR_BEZEICHNUNG, "")).strip(),
+                        ATTR_KUERZEL:        kuerzel,
+                        ATTR_WKN:            str(user_input.get(ATTR_WKN, "")).strip(),
+                        ATTR_ISIN:           isin,
+                        "datenquelle":       quelle,
+                        ATTR_ZIELKURS:       round(float(user_input.get(ATTR_ZIELKURS, 0)), 3),
+                        ATTR_KANDIDAT_NOTIZ: str(user_input.get(ATTR_KANDIDAT_NOTIZ, "")).strip(),
+                    })
+                return self.async_create_entry(title="", data=_current_options(self.config_entry))
+
+        return self.async_show_form(
+            step_id="add_candidate",
+            data_schema=self._candidate_schema(),
+            errors=errors,
+        )
+
+    async def async_step_select_candidate(self, user_input=None):
+        """Kandidat auswählen zum Bearbeiten/Löschen."""
+        from homeassistant.helpers.selector import selector as sel
+        from .candidate_coordinator import CandidateCoordinator
+        coordinator = self.hass.data[DOMAIN].get(self.config_entry.entry_id, {}).get("candidate_coordinator")
+        candidates  = coordinator.get_candidates() if coordinator else {}
+
+        if not candidates:
+            return await self.async_step_candidates()
+
+        if user_input is not None:
+            self._selected_candidate_id = user_input.get("candidate_id")
+            action = user_input.get("action", "edit")
+            if action == "delete":
+                return await self.async_step_confirm_delete_candidate()
+            return await self.async_step_edit_candidate()
+
+        options = [
+            {"value": cid, "label": f"{d.get(ATTR_BEZEICHNUNG,'?')} – Ziel: {d.get(ATTR_ZIELKURS,'?')} €"}
+            for cid, d in candidates.items()
+        ]
+        return self.async_show_form(
+            step_id="select_candidate",
+            data_schema=vol.Schema({
+                vol.Required("candidate_id"): sel({"select": {"options": options, "mode": "list"}}),
+                vol.Required("action", default="edit"): sel({"select": {
+                    "options": [
+                        {"value": "edit",   "label": "✏️ Bearbeiten"},
+                        {"value": "delete", "label": "🗑️ Löschen"},
+                    ],
+                    "mode": "list",
+                }}),
+            }),
+        )
+
+    async def async_step_edit_candidate(self, user_input=None):
+        """Kaufkandidaten bearbeiten."""
+        from .candidate_coordinator import CandidateCoordinator
+        coordinator = self.hass.data[DOMAIN].get(self.config_entry.entry_id, {}).get("candidate_coordinator")
+        cand = coordinator.get_candidates().get(self._selected_candidate_id, {}) if coordinator else {}
+        errors = {}
+
+        if user_input is not None:
+            quelle  = user_input.get("datenquelle", SOURCE_ING)
+            isin    = str(user_input.get(ATTR_ISIN, "")).strip().upper()
+            kuerzel = str(user_input.get(ATTR_KUERZEL, "")).strip().upper()
+            if quelle == SOURCE_ING and not isin:
+                errors[ATTR_ISIN] = "isin_required"
+            elif not kuerzel:
+                errors[ATTR_KUERZEL] = "invalid_kuerzel"
+            else:
+                if coordinator:
+                    await coordinator.async_update_candidate(self._selected_candidate_id, {
+                        ATTR_BEZEICHNUNG:    str(user_input.get(ATTR_BEZEICHNUNG, "")).strip(),
+                        ATTR_KUERZEL:        kuerzel,
+                        ATTR_WKN:            str(user_input.get(ATTR_WKN, "")).strip(),
+                        ATTR_ISIN:           isin,
+                        "datenquelle":       quelle,
+                        ATTR_ZIELKURS:       round(float(user_input.get(ATTR_ZIELKURS, 0)), 3),
+                        ATTR_KANDIDAT_NOTIZ: str(user_input.get(ATTR_KANDIDAT_NOTIZ, "")).strip(),
+                    })
+                return self.async_create_entry(title="", data=_current_options(self.config_entry))
+
+        return self.async_show_form(
+            step_id="edit_candidate",
+            data_schema=self._candidate_schema(cand),
+            errors=errors,
+        )
+
+    async def async_step_confirm_delete_candidate(self, user_input=None):
+        """Löschen eines Kaufkandidaten bestätigen."""
+        from .candidate_coordinator import CandidateCoordinator
+        coordinator = self.hass.data[DOMAIN].get(self.config_entry.entry_id, {}).get("candidate_coordinator")
+        cand = coordinator.get_candidates().get(self._selected_candidate_id, {}) if coordinator else {}
+
+        if user_input is not None:
+            if user_input.get("confirm") and coordinator:
+                await coordinator.async_remove_candidate(self._selected_candidate_id)
+            return self.async_create_entry(title="", data=_current_options(self.config_entry))
+
+        return self.async_show_form(
+            step_id="confirm_delete_candidate",
+            description_placeholders={"name": cand.get(ATTR_BEZEICHNUNG, "?")},
+            data_schema=vol.Schema({
+                vol.Required("confirm", default=False): bool,
+            }),
+        )
+

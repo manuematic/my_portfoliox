@@ -87,6 +87,50 @@
           "scan_interval": "Intervalle de mise à jour (minutes)",
           "fmp_api_key": "Clé API FMP (optionnel, pour les objectifs analystes)"
         }
+      },
+      "candidates": {
+        "title": "Gérer les candidats",
+        "data": {
+          "action": "Action"
+        }
+      },
+      "add_candidate": {
+        "title": "Ajouter un candidat",
+        "data": {
+          "bezeichnung": "Nom",
+          "kuerzel": "Symbole (Yahoo)",
+          "wkn": "WKN",
+          "isin": "ISIN (obligatoire pour ING)",
+          "datenquelle": "Source",
+          "zielkurs": "Prix cible (€)",
+          "notiz": "Note (optionnel)"
+        }
+      },
+      "select_candidate": {
+        "title": "Sélectionner un candidat",
+        "data": {
+          "candidate_id": "Candidat",
+          "action": "Action"
+        }
+      },
+      "edit_candidate": {
+        "title": "Modifier le candidat",
+        "data": {
+          "bezeichnung": "Nom",
+          "kuerzel": "Symbole (Yahoo)",
+          "wkn": "WKN",
+          "isin": "ISIN",
+          "datenquelle": "Source",
+          "zielkurs": "Prix cible (€)",
+          "notiz": "Note (optionnel)"
+        }
+      },
+      "confirm_delete_candidate": {
+        "title": "Supprimer le candidat",
+        "description": "Supprimer '{name}'?",
+        "data": {
+          "confirm": "Oui, supprimer"
+        }
       }
     },
     "error": {

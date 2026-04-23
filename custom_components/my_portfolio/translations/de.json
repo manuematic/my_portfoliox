@@ -87,6 +87,50 @@
           "scan_interval": "Aktualisierungsintervall (Minuten)",
           "fmp_api_key": "FMP API-Key (optional, für Analysten-Kursziele)"
         }
+      },
+      "candidates": {
+        "title": "Kaufkandidaten verwalten",
+        "data": {
+          "action": "Aktion"
+        }
+      },
+      "add_candidate": {
+        "title": "Kaufkandidaten hinzufügen",
+        "data": {
+          "bezeichnung": "Bezeichnung",
+          "kuerzel": "Kürzel (Yahoo)",
+          "wkn": "WKN",
+          "isin": "ISIN (Pflicht für ING)",
+          "datenquelle": "Datenquelle",
+          "zielkurs": "Zielkurs (€)",
+          "notiz": "Notiz (optional)"
+        }
+      },
+      "select_candidate": {
+        "title": "Kandidat auswählen",
+        "data": {
+          "candidate_id": "Kandidat",
+          "action": "Aktion"
+        }
+      },
+      "edit_candidate": {
+        "title": "Kandidat bearbeiten",
+        "data": {
+          "bezeichnung": "Bezeichnung",
+          "kuerzel": "Kürzel (Yahoo)",
+          "wkn": "WKN",
+          "isin": "ISIN",
+          "datenquelle": "Datenquelle",
+          "zielkurs": "Zielkurs (€)",
+          "notiz": "Notiz (optional)"
+        }
+      },
+      "confirm_delete_candidate": {
+        "title": "Kandidat löschen",
+        "description": "Kandidat '{name}' wirklich löschen?",
+        "data": {
+          "confirm": "Ja, löschen"
+        }
       }
     },
     "error": {

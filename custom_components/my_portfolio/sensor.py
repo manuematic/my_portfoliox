@@ -45,6 +45,8 @@ from .const import (
     ATTR_PORTFOLIO_PROZENT,
 )
 from .coordinator import MyPortfolioCoordinator
+from .candidate_sensor import CandidateSensor
+from .candidate_coordinator import CandidateCoordinator
 
 _LOGGER = logging.getLogger(__name__)
 

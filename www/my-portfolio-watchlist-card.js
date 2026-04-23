@@ -147,7 +147,9 @@ class MyPortfolioWatchlistCard extends HTMLElement {
           </div>
           <div class="info">
             <div class="name-row">
-              <span class="name">${s.bezeichnung}</span>
+              ${s.isin
+                ? `<a class="name name-link" href="https://wertpapiere.ing.de/investieren/aktienportrait/${s.isin}" target="_blank" rel="noopener">${s.bezeichnung}</a>`
+                : `<span class="name">${s.bezeichnung}</span>`}
               <span class="ticker">${s.kuerzel}</span>
             </div>
             <div class="limits-row">
@@ -296,6 +298,20 @@ class MyPortfolioWatchlistCard extends HTMLElement {
           overflow: hidden;
           text-overflow: ellipsis;
         }
+        .name a {
+          color: inherit;
+          text-decoration: none;
+        }
+        .name a:hover {
+          text-decoration: underline;
+          color: #60a5fa;
+        }
+        .name-link {
+          text-decoration: none;
+          border-bottom: 1px dashed rgba(96,165,250,0.4);
+          transition: color .15s, border-color .15s;
+        }
+        .name-link:hover { color: #93c5fd; border-bottom-color: #93c5fd; }
         .ticker {
           font-size: .7rem;
           color: var(--secondary-text-color);

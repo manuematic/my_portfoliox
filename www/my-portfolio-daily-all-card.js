@@ -55,6 +55,7 @@ class MyPortfolioDailyAllCard extends HTMLElement {
       stocks.push({
         bezeichnung: (attr.bezeichnung || attr.kuerzel || "").trim(),
         kuerzel:     attr.kuerzel || "?",
+        isin:        attr.isin || null,
         portfolio:   attr.portfolio_name || "",
         kurs:        parseFloat(state.state) || null,
         tages_pct:   pct,
@@ -112,7 +113,9 @@ class MyPortfolioDailyAllCard extends HTMLElement {
           <div class="rank">${i + 1}</div>
           <div class="info">
             <div class="name-row">
-              <span class="name">${s.bezeichnung}</span>
+              ${s.isin
+                ? `<a class="name name-link" href="https://wertpapiere.ing.de/investieren/aktienportrait/${s.isin}" target="_blank" rel="noopener">${s.bezeichnung}</a>`
+                : `<span class="name">${s.bezeichnung}</span>`}
               <span class="ticker">${s.kuerzel}</span>
             </div>
             <div class="bar-track">
@@ -157,7 +160,9 @@ class MyPortfolioDailyAllCard extends HTMLElement {
         .rank{font-family:'DM Mono',monospace;font-size:.85rem;color:var(--secondary-text-color);width:1.5rem;text-align:right;flex-shrink:0}
         .info{flex:1;min-width:0}
         .name-row{display:flex;align-items:baseline;gap:.5rem}
-        .name{font-size:1.05rem;font-weight:600;color:var(--primary-text-color);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.name{font-size:1.05rem;font-weight:600;color:var(--primary-text-color);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+        .name-link{text-decoration:none;border-bottom:1px dashed rgba(96,165,250,0.4);transition:color .15s,border-color .15s}
+        .name-link:hover{color:#93c5fd;border-bottom-color:#93c5fd}
         .ticker{font-size:.72rem;color:var(--secondary-text-color);font-family:'DM Mono',monospace;flex-shrink:0}
         .bar-track{margin-top:.35rem;height:3px;background:rgba(255,255,255,.06);border-radius:2px;overflow:hidden;display:flex}
         .bar-fill{height:3px;border-radius:2px;transition:width .6s cubic-bezier(.4,0,.2,1);min-width:1px}
