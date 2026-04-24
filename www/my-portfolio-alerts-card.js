@@ -26,6 +26,7 @@ class MyPortfolioAlertsCard extends HTMLElement {
       if (!entityId.startsWith("sensor.")) continue;
       const attr = state.attributes || {};
       if (attr.kuerzel === undefined || attr.summary_key !== undefined) continue;
+      if (attr.integration === "my_portfolio_candidate") continue;
       const oben   = attr.alarmoben  === true;
       const unten  = attr.alarmunten === true;
       if (!oben && !unten) continue;
