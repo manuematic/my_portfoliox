@@ -60,7 +60,7 @@ class MyPortfolioOverviewCard extends HTMLElement {
             p[summaryKey] = val;
           }
         }
-      } else if (attr.kuerzel !== undefined && !summaryKey) {
+      } else if (attr.kuerzel !== undefined && !summaryKey && attr.integration !== "my_portfolio_candidate") {
         // Aktien-Sensor
         p.stockCount++;
       }

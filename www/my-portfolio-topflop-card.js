@@ -32,6 +32,7 @@ class MyPortfolioTopFlopCard extends HTMLElement {
       const attr = state.attributes;
       // Aktien-Sensoren: kuerzel vorhanden, kein summary_key
       if (attr.kuerzel === undefined || attr.summary_key !== undefined) continue;
+      if (attr.integration === "my_portfolio_candidate") continue;
       const gewinn = parseFloat(attr.gewinn);
       if (isNaN(gewinn)) continue;
       stocks.push({

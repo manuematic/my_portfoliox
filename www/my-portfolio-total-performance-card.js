@@ -46,6 +46,7 @@ class MyPortfolioTotalPerformanceCard extends HTMLElement {
       if (!entityId.startsWith("sensor.")) continue;
       const attr = state.attributes || {};
       if (attr.kuerzel === undefined || attr.summary_key !== undefined) continue;
+      if (attr.integration === "my_portfolio_candidate") continue;
 
       const kurs     = parseFloat(state.state);
       const preis    = parseFloat(attr.preis);
