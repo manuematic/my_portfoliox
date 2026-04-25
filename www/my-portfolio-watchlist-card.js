@@ -43,6 +43,7 @@ class MyPortfolioWatchlistCard extends HTMLElement {
       const attr = state.attributes || {};
       if (attr.kuerzel === undefined || attr.summary_key !== undefined) continue;
       if (attr.integration === "my_portfolio_candidate") continue;
+      if (attr.limitoben === undefined && attr.limitunten === undefined) continue;
       const kurs   = parseFloat(state.state);
       const preis  = parseFloat(attr.preis);
       const gewinn = parseFloat(attr.gewinn);
