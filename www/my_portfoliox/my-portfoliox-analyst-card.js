@@ -1,9 +1,9 @@
 /**
- * my-portfolio-analyst-card  v0.9.3
+ * my-portfoliox-analyst-card  v0.9.3
  * Analysten-Kursziele aller Aktien – via FMP API.
  *
  * YAML:
- *   type: custom:my-portfolio-analyst-card
+ *   type: custom:my-portfoliox-analyst-card
  *   title: Analysten-Kursziele   # optional
  *   sort: upside                 # upside | alpha | pct  (Standard: upside)
  *   order: desc                  # desc | asc
@@ -256,10 +256,10 @@ class MyPortfolioAnalystCard extends HTMLElement {
   static getStubConfig() { return { title: "Analysten-Kursziele", sort: "upside", order: "desc" }; }
 }
 
-customElements.define("my-portfolio-analyst-card", MyPortfolioAnalystCard);
+customElements.define("my-portfoliox-analyst-card", MyPortfolioAnalystCard);
 window.customCards = window.customCards || [];
 window.customCards.push({
-  type:        "my-portfolio-analyst-card",
+  type:        "my-portfoliox-analyst-card",
   name:        "Portfolio Analysten-Kursziele",
   description: "Analysten-Kursziele und Konsens via FMP API.",
 });

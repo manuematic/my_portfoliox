@@ -1,4 +1,4 @@
-"""Mein Portfolio – Home Assistant Integration."""
+"""My Portfolio X – Home Assistant Integration."""
 from __future__ import annotations
 
 import logging

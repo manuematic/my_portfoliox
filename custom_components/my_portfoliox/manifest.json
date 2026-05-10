@@ -1,11 +1,11 @@
 {
-  "domain": "my_portfolio",
-  "name": "Mein Portfolio",
-  "version": "0.9.7",
-  "documentation": "https://github.com/manuematic/my_portfolio",
-  "issue_tracker": "https://github.com/manuematic/my_portfolio/issues",
+  "domain": "my_portfoliox",
+  "name": "My Portfolio X",
+  "version": "0.1.0",
+  "documentation": "https://codeberg.org/tuxoid/my_portfoliox",
+  "issue_tracker": "https://codeberg.org/tuxoid/my_portfoliox/issues",
   "codeowners": [
-    "@manuematic"
+    "@tuxoid"
   ],
   "requirements": [
     "aiohttp>=3.13.3"

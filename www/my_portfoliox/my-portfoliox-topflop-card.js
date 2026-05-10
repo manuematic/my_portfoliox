@@ -1,13 +1,13 @@
 /**
- * my-portfolio-topflop-card  v0.6.1
+ * my-portfoliox-topflop-card  v0.6.1
  * Zeigt die besten 3 und schlechtesten 3 Aktien nach prozentualem Gewinn.
  *
  * Installation:
- *   1. Datei nach /config/www/my-portfolio-topflop-card.js kopieren
+ *   1. Datei nach /config/www/my-portfoliox-topflop-card.js kopieren
  *   2. Einstellungen → Dashboards → ⋮ → Ressourcen → + Hinzufügen
- *      URL: /local/my-portfolio-topflop-card.js  Typ: JavaScript-Modul
+ *      URL: /local/my-portfoliox-topflop-card.js  Typ: JavaScript-Modul
  *   3. Dashboard-Karte (YAML):
- *      type: custom:my-portfolio-topflop-card
+ *      type: custom:my-portfoliox-topflop-card
  *      title: Top & Flop Aktien   # optional
  *      max_items: 3               # optional, Standard: 3
  */
@@ -32,7 +32,7 @@ class MyPortfolioTopFlopCard extends HTMLElement {
       const attr = state.attributes;
       // Aktien-Sensoren: kuerzel vorhanden, kein summary_key
       if (attr.kuerzel === undefined || attr.summary_key !== undefined) continue;
-      if (attr.integration === "my_portfolio_candidate") continue;
+      if (attr.integration === "my_portfoliox_candidate") continue;
       const gewinn = parseFloat(attr.gewinn);
       if (isNaN(gewinn)) continue;
       stocks.push({
@@ -230,10 +230,10 @@ class MyPortfolioTopFlopCard extends HTMLElement {
   static getStubConfig() { return { title: "Top & Flop Aktien", max_items: 3 }; }
 }
 
-customElements.define("my-portfolio-topflop-card", MyPortfolioTopFlopCard);
+customElements.define("my-portfoliox-topflop-card", MyPortfolioTopFlopCard);
 window.customCards = window.customCards || [];
 window.customCards.push({
-  type: "my-portfolio-topflop-card",
+  type: "my-portfoliox-topflop-card",
   name: "Portfolio Top & Flop",
   description: "Zeigt die besten und schlechtesten Aktien nach prozentualem Gewinn.",
 });

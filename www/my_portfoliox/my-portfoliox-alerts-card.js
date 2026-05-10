@@ -1,9 +1,9 @@
 /**
- * my-portfolio-alerts-card  v0.9.0
+ * my-portfoliox-alerts-card  v0.9.0
  * Zeigt nur Aktien die ein Limit unter- oder überschritten haben.
  *
  * YAML:
- *   type: custom:my-portfolio-alerts-card
+ *   type: custom:my-portfoliox-alerts-card
  *   title: Limit-Alarme   # optional
  */
 
@@ -26,7 +26,7 @@ class MyPortfolioAlertsCard extends HTMLElement {
       if (!entityId.startsWith("sensor.")) continue;
       const attr = state.attributes || {};
       if (attr.kuerzel === undefined || attr.summary_key !== undefined) continue;
-      if (attr.integration === "my_portfolio_candidate") continue;
+      if (attr.integration === "my_portfoliox_candidate") continue;
       const oben   = attr.alarmoben  === true;
       const unten  = attr.alarmunten === true;
       if (!oben && !unten) continue;
@@ -268,10 +268,10 @@ class MyPortfolioAlertsCard extends HTMLElement {
   static getStubConfig() { return { title: "Limit-Alarme" }; }
 }
 
-customElements.define("my-portfolio-alerts-card", MyPortfolioAlertsCard);
+customElements.define("my-portfoliox-alerts-card", MyPortfolioAlertsCard);
 window.customCards = window.customCards || [];
 window.customCards.push({
-  type:        "my-portfolio-alerts-card",
+  type:        "my-portfoliox-alerts-card",
   name:        "Portfolio Limit-Alarme",
   description: "Zeigt nur Aktien die ein Limit unter- oder überschritten haben.",
 });

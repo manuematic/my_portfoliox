@@ -1,12 +1,12 @@
 /**
- * my-portfolio-daily-topflop-card  v0.7.0
+ * my-portfoliox-daily-topflop-card  v0.7.0
  * Top 3 / Flop 3 nach heutiger Tagesperformance.
  *
  * Installation:
- *   1. Nach /config/www/my-portfolio-daily-topflop-card.js kopieren
- *   2. Ressource: /local/my-portfolio-daily-topflop-card.js  (JavaScript-Modul)
+ *   1. Nach /config/www/my-portfoliox-daily-topflop-card.js kopieren
+ *   2. Ressource: /local/my-portfoliox-daily-topflop-card.js  (JavaScript-Modul)
  *   3. YAML:
- *      type: custom:my-portfolio-daily-topflop-card
+ *      type: custom:my-portfoliox-daily-topflop-card
  *      title: Tages Top & Flop   # optional
  *      max_items: 3              # optional
  */
@@ -30,7 +30,7 @@ class MyPortfolioDailyTopFlopCard extends HTMLElement {
       if (!entityId.startsWith("sensor.")) continue;
       const attr = state.attributes || {};
       if (attr.kuerzel === undefined || attr.summary_key !== undefined) continue;
-      if (attr.integration === "my_portfolio_candidate") continue;
+      if (attr.integration === "my_portfoliox_candidate") continue;
       const pct = parseFloat(attr.tages_aenderung_pct);
       if (isNaN(pct)) continue;
       stocks.push({
@@ -249,10 +249,10 @@ class MyPortfolioDailyTopFlopCard extends HTMLElement {
   static getStubConfig() { return { title: "Tages Top & Flop", max_items: 3 }; }
 }
 
-customElements.define("my-portfolio-daily-topflop-card", MyPortfolioDailyTopFlopCard);
+customElements.define("my-portfoliox-daily-topflop-card", MyPortfolioDailyTopFlopCard);
 window.customCards = window.customCards || [];
 window.customCards.push({
-  type: "my-portfolio-daily-topflop-card",
+  type: "my-portfoliox-daily-topflop-card",
   name: "Portfolio Tages Top & Flop",
   description: "Top 3 / Flop 3 Aktien nach heutiger Tagesperformance.",
 });

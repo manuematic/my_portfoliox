@@ -1,14 +1,14 @@
 /**
- * my-portfolio-overview-card  v0.6.1
+ * my-portfoliox-overview-card  v0.6.1
  * Zeigt eine Übersicht aller Portfolios mit Gesamtinvest, Gesamtwert,
  * Portfoliodifferenz und Portfolioprozent.
  *
  * Installation:
- *   1. Datei nach /config/www/my-portfolio-overview-card.js kopieren
+ *   1. Datei nach /config/www/my-portfoliox-overview-card.js kopieren
  *   2. Einstellungen → Dashboards → ⋮ → Ressourcen → + Hinzufügen
- *      URL: /local/my-portfolio-overview-card.js  Typ: JavaScript-Modul
+ *      URL: /local/my-portfoliox-overview-card.js  Typ: JavaScript-Modul
  *   3. Dashboard-Karte (YAML):
- *      type: custom:my-portfolio-overview-card
+ *      type: custom:my-portfoliox-overview-card
  *      title: Meine Portfolios   # optional
  */
 
@@ -60,7 +60,7 @@ class MyPortfolioOverviewCard extends HTMLElement {
             p[summaryKey] = val;
           }
         }
-      } else if (attr.kuerzel !== undefined && !summaryKey && attr.integration !== "my_portfolio_candidate") {
+      } else if (attr.kuerzel !== undefined && !summaryKey && attr.integration !== "my_portfoliox_candidate") {
         // Aktien-Sensor
         p.stockCount++;
       }
@@ -338,10 +338,10 @@ class MyPortfolioOverviewCard extends HTMLElement {
   static getStubConfig() { return { title: "Portfolio-Übersicht" }; }
 }
 
-customElements.define("my-portfolio-overview-card", MyPortfolioOverviewCard);
+customElements.define("my-portfoliox-overview-card", MyPortfolioOverviewCard);
 window.customCards = window.customCards || [];
 window.customCards.push({
-  type: "my-portfolio-overview-card",
+  type: "my-portfoliox-overview-card",
   name: "Portfolio Übersicht",
   description: "Zeigt alle Portfolios mit Gesamtinvest, Gesamtwert, Differenz und Prozent.",
 });

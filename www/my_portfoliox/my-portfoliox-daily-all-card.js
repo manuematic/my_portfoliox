@@ -1,9 +1,9 @@
 /**
- * my-portfolio-daily-all-card  v0.8.3
+ * my-portfoliox-daily-all-card  v0.8.3
  * Alle Aktien sortiert nach heutiger Tagesperformance.
  *
  * YAML:
- *   type: custom:my-portfolio-daily-all-card
+ *   type: custom:my-portfoliox-daily-all-card
  *   title: Tagesperformance
  *   sort: pct       # pct | eur | alpha
  *   order: desc     # desc | asc
@@ -47,7 +47,7 @@ class MyPortfolioDailyAllCard extends HTMLElement {
       if (!entityId.startsWith("sensor.")) continue;
       const attr = state.attributes || {};
       if (attr.kuerzel === undefined || attr.summary_key !== undefined) continue;
-      if (attr.integration === "my_portfolio_candidate") continue;
+      if (attr.integration === "my_portfoliox_candidate") continue;
       const pct = parseFloat(attr.tages_aenderung_pct);
       if (isNaN(pct)) continue;
       const stueckzahl  = parseFloat(attr.stueckzahl) || 0;
@@ -195,10 +195,10 @@ class MyPortfolioDailyAllCard extends HTMLElement {
   static getStubConfig() { return { title: "Tagesperformance", sort: "pct", order: "desc" }; }
 }
 
-customElements.define("my-portfolio-daily-all-card", MyPortfolioDailyAllCard);
+customElements.define("my-portfoliox-daily-all-card", MyPortfolioDailyAllCard);
 window.customCards = window.customCards || [];
 window.customCards.push({
-  type:        "my-portfolio-daily-all-card",
+  type:        "my-portfoliox-daily-all-card",
   name:        "Portfolio Tagesperformance (alle)",
   description: "Alle Aktien nach Tagesperformance – mit Sortier-Optionen.",
 });

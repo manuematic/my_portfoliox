@@ -1,9 +1,9 @@
 /**
- * my-portfolio-total-performance-card  v0.8.0
+ * my-portfoliox-total-performance-card  v0.8.0
  * Gesamtperformance aller Aktien seit Kauf – sortierbar.
  *
  * YAML-Konfiguration:
- *   type: custom:my-portfolio-total-performance-card
+ *   type: custom:my-portfoliox-total-performance-card
  *   title: Gesamtperformance       # optional
  *   sort: pct                      # pct | eur | alpha  (Standard: pct)
  *   order: desc                    # desc | asc         (Standard: desc)
@@ -46,7 +46,7 @@ class MyPortfolioTotalPerformanceCard extends HTMLElement {
       if (!entityId.startsWith("sensor.")) continue;
       const attr = state.attributes || {};
       if (attr.kuerzel === undefined || attr.summary_key !== undefined) continue;
-      if (attr.integration === "my_portfolio_candidate") continue;
+      if (attr.integration === "my_portfoliox_candidate") continue;
 
       const kurs     = parseFloat(state.state);
       const preis    = parseFloat(attr.preis);
@@ -447,10 +447,10 @@ class MyPortfolioTotalPerformanceCard extends HTMLElement {
 // Hilfs-Rundung
 function round2(v) { return Math.round(v * 100) / 100; }
 
-customElements.define("my-portfolio-total-performance-card", MyPortfolioTotalPerformanceCard);
+customElements.define("my-portfoliox-total-performance-card", MyPortfolioTotalPerformanceCard);
 window.customCards = window.customCards || [];
 window.customCards.push({
-  type: "my-portfolio-total-performance-card",
+  type: "my-portfoliox-total-performance-card",
   name: "Portfolio Gesamtperformance",
   description: "Alle Aktien nach Gesamtperformance seit Kauf – sortierbar.",
 });

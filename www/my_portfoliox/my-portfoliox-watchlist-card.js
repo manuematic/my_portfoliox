@@ -1,9 +1,9 @@
 /**
- * my-portfolio-watchlist-card  v0.9.0
+ * my-portfoliox-watchlist-card  v0.9.0
  * Gesamtübersicht aller Aktien mit kreisrundem Limit-Status-Indikator.
  *
  * YAML:
- *   type: custom:my-portfolio-watchlist-card
+ *   type: custom:my-portfoliox-watchlist-card
  *   title: Watchlist         # optional
  *   sort: alpha              # alpha | pct | kurs  (Standard: alpha)
  *   order: asc               # asc | desc          (Standard: asc)
@@ -42,7 +42,7 @@ class MyPortfolioWatchlistCard extends HTMLElement {
       if (!entityId.startsWith("sensor.")) continue;
       const attr = state.attributes || {};
       if (attr.kuerzel === undefined || attr.summary_key !== undefined) continue;
-      if (attr.integration === "my_portfolio_candidate") continue;
+      if (attr.integration === "my_portfoliox_candidate") continue;
       if (attr.limitoben === undefined && attr.limitunten === undefined) continue;
       const kurs   = parseFloat(state.state);
       const preis  = parseFloat(attr.preis);
@@ -394,10 +394,10 @@ class MyPortfolioWatchlistCard extends HTMLElement {
   static getStubConfig() { return { title: "Watchlist", sort: "alpha", order: "asc" }; }
 }
 
-customElements.define("my-portfolio-watchlist-card", MyPortfolioWatchlistCard);
+customElements.define("my-portfoliox-watchlist-card", MyPortfolioWatchlistCard);
 window.customCards = window.customCards || [];
 window.customCards.push({
-  type:        "my-portfolio-watchlist-card",
+  type:        "my-portfoliox-watchlist-card",
   name:        "Portfolio Watchlist",
   description: "Alle Aktien mit kreisrundem Limit-Status-Indikator.",
 });
