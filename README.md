@@ -64,9 +64,9 @@ Eine Home Assistant Custom Integration zur Verwaltung und Überwachung von Aktie
 
 ### 2. Dashboard-Cards installieren
 
-1. Alle `.js`-Dateien aus dem `www/`-Ordner nach `/config/www/` kopieren
+1. Den Ordner `www/my_portfoliox/` nach `/config/www/my_portfoliox/` kopieren
 2. **Einstellungen → Dashboards → Ressourcen → + Ressource hinzufügen**
-3. Für jede Datei: `/local/dateiname.js` → Typ: **JavaScript-Modul**
+3. Für jede Datei: `/local/my_portfoliox/dateiname.js` → Typ: **JavaScript-Modul**
 
 > **Tipp bei Updates:** Nach dem Ersetzen einer `.js`-Datei den Browsercache umgehen,
 > indem die Ressource-URL um eine Versionsnummer ergänzt wird: `/local/dateiname.js?v=2`
