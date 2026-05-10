@@ -1,5 +1,5 @@
 /**
- * my-portfoliox-analyst-card  v0.9.3
+ * my-portfoliox-analyst-card  v0.1.0
  * Analysten-Kursziele aller Aktien – via FMP API.
  *
  * YAML:

@@ -1,5 +1,5 @@
 /**
- * my-portfoliox-topflop-card  v0.6.1
+ * my-portfoliox-topflop-card  v0.1.0
  * Zeigt die besten 3 und schlechtesten 3 Aktien nach prozentualem Gewinn.
  *
  * Installation:

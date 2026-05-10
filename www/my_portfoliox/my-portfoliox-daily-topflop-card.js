@@ -1,5 +1,5 @@
 /**
- * my-portfoliox-daily-topflop-card  v0.7.0
+ * my-portfoliox-daily-topflop-card  v0.1.0
  * Top 3 / Flop 3 nach heutiger Tagesperformance.
  *
  * Installation:

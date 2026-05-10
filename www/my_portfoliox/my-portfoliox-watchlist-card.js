@@ -1,5 +1,5 @@
 /**
- * my-portfoliox-watchlist-card  v0.9.0
+ * my-portfoliox-watchlist-card  v0.1.0
  * Gesamtübersicht aller Aktien mit kreisrundem Limit-Status-Indikator.
  *
  * YAML:

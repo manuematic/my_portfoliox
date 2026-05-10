@@ -1,5 +1,5 @@
 /**
- * my-portfoliox-daily-all-card  v0.8.3
+ * my-portfoliox-daily-all-card  v0.1.0
  * Alle Aktien sortiert nach heutiger Tagesperformance.
  *
  * YAML:

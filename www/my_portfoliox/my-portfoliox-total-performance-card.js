@@ -1,5 +1,5 @@
 /**
- * my-portfoliox-total-performance-card  v0.8.0
+ * my-portfoliox-total-performance-card  v0.1.0
  * Gesamtperformance aller Aktien seit Kauf – sortierbar.
  *
  * YAML-Konfiguration:

@@ -1,5 +1,5 @@
 /**
- * my-portfoliox-overview-card  v0.6.1
+ * my-portfoliox-overview-card  v0.1.0
  * Zeigt eine Übersicht aller Portfolios mit Gesamtinvest, Gesamtwert,
  * Portfoliodifferenz und Portfolioprozent.
  *

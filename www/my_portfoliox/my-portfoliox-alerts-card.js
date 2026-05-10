@@ -1,5 +1,5 @@
 /**
- * my-portfoliox-alerts-card  v0.9.0
+ * my-portfoliox-alerts-card  v0.1.0
  * Zeigt nur Aktien die ein Limit unter- oder überschritten haben.
  *
  * YAML:
