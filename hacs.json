@@ -1,9 +1,9 @@
 {
-  "name": "Mein Portfolio",
-  "domain": "my_portfolio",
-  "documentation": "https://github.com/manuematic/my_portfolio",
-  "issue_tracker": "https://github.com/manuematic/my_portfolio/issues",
-  "codeowners": ["@manuematic"],
+  "name": "My Portfolio X",
+  "domain": "my_portfoliox",
+  "documentation": "https://codeberg.org/tuxoid/my_portfoliox",
+  "issue_tracker": "https://codeberg.org/tuxoid/my_portfoliox/issues",
+  "codeowners": ["@tuxoid"],
   "requirements": [],
   "iot_class": "cloud_polling",
   "homeassistant": "2023.6.0"

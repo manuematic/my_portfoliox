@@ -1,7 +1,7 @@
-# 📈 Mein Portfolio – Home Assistant Integration
+# 📈 My Portfolio X – Home Assistant Integration
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/hacs/integration)
-[![GitHub release](https://img.shields.io/github/release/manuematic/my_portfolio.svg)](https://github.com/manuematic/my_portfolio/releases)
+[![GitHub release](https://img.shields.io/github/release/tuxoid/my_portfoliox.svg)](https://codeberg.org/tuxoid/my_portfoliox/releases)
 [![HA Version](https://img.shields.io/badge/Home%20Assistant-2024.1%2B-blue.svg)](https://www.home-assistant.io/)
 
 Eine Home Assistant Custom Integration zur Verwaltung und Überwachung von Aktienportfolios. Kursdaten werden primär von der **ING Wertpapiere API** bezogen – zuverlässig, aktuell und ohne API-Key. Optional können Analysten-Kursziele über **Financial Modeling Prep (FMP)** abgerufen werden.
@@ -57,9 +57,9 @@ Eine Home Assistant Custom Integration zur Verwaltung und Überwachung von Aktie
 ### 1. Integration via HACS
 
 1. HACS öffnen → **Integrationen** → **⋮** → **Benutzerdefinierte Repositories**
-2. URL eingeben: `https://github.com/manuematic/my_portfolio`
+2. URL eingeben: `https://codeberg.org/tuxoid/my_portfoliox`
 3. Kategorie: **Integration** → **Hinzufügen**
-4. Integration suchen: **Mein Portfolio** → **Installieren**
+4. Integration suchen: **My Portfolio X** → **Installieren**
 5. Home Assistant **neu starten**
 
 ### 2. Dashboard-Cards installieren
@@ -76,7 +76,7 @@ Eine Home Assistant Custom Integration zur Verwaltung und Überwachung von Aktie
 ## ⚙️ Einrichtung
 
 1. **Einstellungen → Integrationen → + Integration hinzufügen**
-2. Nach **„Mein Portfolio"** suchen und auswählen
+2. Nach **„My Portfolio X"** suchen und auswählen
 3. Portfolio-Namen eingeben (z.B. „Technologie-Depot")
 4. Aktualisierungsintervall wählen (Standard: 15 Minuten)
 5. Optional: **FMP API-Key** für Analysten-Kursziele eintragen
@@ -87,7 +87,7 @@ Eine Home Assistant Custom Integration zur Verwaltung und Überwachung von Aktie
 
 Alle Aktien werden direkt über die HA-Benutzeroberfläche verwaltet:
 
-**Einstellungen → Integrationen → Mein Portfolio → Konfigurieren**
+**Einstellungen → Integrationen → My Portfolio X → Konfigurieren**
 
 ### Felder beim Hinzufügen
 
@@ -121,37 +121,37 @@ Alle Aktien werden direkt über die HA-Benutzeroberfläche verwaltet:
 
 ### Übersicht
 ```yaml
-type: custom:my-portfolio-overview-card
-title: Mein Portfolio
+type: custom:my-portfoliox-overview-card
+title: My Portfolio X
 ```
 
 ### Top/Flop Gesamtperformance
 ```yaml
-type: custom:my-portfolio-topflop-card
+type: custom:my-portfoliox-topflop-card
 ```
 
 ### Gesamtperformance (alle Aktien, sortierbar)
 ```yaml
-type: custom:my-portfolio-total-performance-card
+type: custom:my-portfoliox-total-performance-card
 sort: pct      # pct | eur | alpha
 order: desc    # desc | asc
 ```
 
 ### Tages Top/Flop
 ```yaml
-type: custom:my-portfolio-daily-topflop-card
+type: custom:my-portfoliox-daily-topflop-card
 ```
 
 ### Tagesperformance (alle Aktien, sortierbar)
 ```yaml
-type: custom:my-portfolio-daily-all-card
+type: custom:my-portfoliox-daily-all-card
 sort: pct
 order: desc
 ```
 
 ### Watchlist mit Limit-Status
 ```yaml
-type: custom:my-portfolio-watchlist-card
+type: custom:my-portfoliox-watchlist-card
 sort: alpha    # alpha | pct | kurs
 order: asc
 ```
@@ -162,13 +162,13 @@ Kreisrunder Statusindikator pro Aktie:
 
 ### Limit-Alarme
 ```yaml
-type: custom:my-portfolio-alerts-card
+type: custom:my-portfoliox-alerts-card
 ```
 Zeigt nur Aktien mit aktivem Alarm. Bei keinem Alarm: ✅ Bestätigungsmeldung.
 
 ### Kursverlauf (Chart)
 ```yaml
-type: custom:my-portfolio-chart-card
+type: custom:my-portfoliox-chart-card
 title: Kursverlauf
 ```
 Jahreschart mit auswählbarer Aktie. Optionale Overlays:
@@ -176,7 +176,7 @@ Jahreschart mit auswählbarer Aktie. Optionale Overlays:
 
 ### Analysten-Kursziele
 ```yaml
-type: custom:my-portfolio-analyst-card
+type: custom:my-portfoliox-analyst-card
 sort: upside   # upside | pct | alpha
 order: desc
 ```
