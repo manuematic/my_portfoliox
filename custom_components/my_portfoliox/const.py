@@ -1,7 +1,7 @@
-"""Constants for Mein Portfolio integration."""
+"""Constants for My Portfolio X integration."""
 
-DOMAIN = "my_portfolio"
-NAME = "Mein Portfolio"
+DOMAIN = "my_portfoliox"
+NAME = "My Portfolio X"
 
 # Storage
 STORAGE_KEY = f"{DOMAIN}.portfolios"
@@ -68,6 +68,30 @@ PLATFORMS = ["sensor"]
 # Financial Modeling Prep (FMP)
 CONF_FMP_API_KEY = "fmp_api_key"
 FMP_BASE_URL     = "https://financialmodelingprep.com/api/v3"
+
+# InfluxDB 2
+CONF_INFLUX_URL    = "influx_url"
+CONF_INFLUX_TOKEN  = "influx_token"
+CONF_INFLUX_ORG    = "influx_org"
+CONF_INFLUX_BUCKET = "influx_bucket"
+CONF_STEUERSATZ    = "steuersatz"
+DEFAULT_STEUERSATZ = 26.375  # dt. Abgeltungssteuer + Soli
+
+# SMA / Kurshistorie
+ATTR_SMA_20        = "sma_20"
+ATTR_SMA_50        = "sma_50"
+ATTR_SMA_200       = "sma_200"
+ATTR_PREIS_HISTORY = "preis_history"   # [{date, kurs}] – max 200 Tageskurse
+
+# Bilanz / Transaktionen
+ATTR_TRANSAKTIONEN     = "transaktionen"
+ATTR_VERKAUFSKURS      = "verkaufskurs"
+ATTR_VERKAUFSDATUM     = "verkaufsdatum"
+ATTR_GEWINN_BRUTTO     = "gewinn_brutto"
+ATTR_GEWINN_BRUTTO_PCT = "gewinn_brutto_pct"
+ATTR_GEWINN_NETTO      = "gewinn_netto"
+ATTR_STEUER_BETRAG     = "steuer_betrag"
+ATTR_ERLOES_GESAMT     = "erloes_gesamt"   # verkaufskurs * stueckzahl
 
 # Analysten-Attribute
 ATTR_KZ_HOCH      = "kursziel_hoch"

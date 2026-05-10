@@ -34,16 +34,16 @@
           "wkn": "WKN (optional)",
           "isin": "ISIN (Pflicht für ING)",
           "kuerzel": "Börsenkürzel (z.B. AAPL, BAS.DE)",
-          "preis": "Kaufpreis pro Stück",
-          "stueckzahl": "Stückzahl (z.B. 10 oder 2.50)",
+          "preis": "Kaufpreis pro Stück (€)",
+          "stueckzahl": "Stückzahl (z.B. 10 oder 2.5)",
           "kaufdatum": "Kaufdatum",
           "limitoben": "Limit Oben (Alarm bei Überschreitung, 0 = kein Limit)",
           "limitunten": "Limit Unten (Alarm bei Unterschreitung, 0 = kein Limit)",
-          "kursquelle_url": "Kursseiten-URL (z.B. https://www.finanzen.net/aktien/basf-aktie)",
           "datenquelle": "Datenquelle"
         },
         "errors": {
-          "isin_required": "ISIN ist Pflicht wenn ING als Datenquelle gewählt ist"
+          "isin_required": "ISIN ist Pflicht wenn ING als Datenquelle gewählt ist",
+          "invalid_kuerzel": "Bitte gib ein gültiges Börsenkürzel ein."
         }
       },
       "select_stock": {
@@ -61,12 +61,11 @@
           "wkn": "WKN",
           "isin": "ISIN (Pflicht für ING)",
           "kuerzel": "Börsenkürzel",
-          "preis": "Kaufpreis pro Stück",
-          "stueckzahl": "Stückzahl (z.B. 10 oder 2.50)",
+          "preis": "Kaufpreis pro Stück (€)",
+          "stueckzahl": "Stückzahl",
           "kaufdatum": "Kaufdatum",
           "limitoben": "Limit Oben",
           "limitunten": "Limit Unten",
-          "kursquelle_url": "Kursseiten-URL",
           "datenquelle": "Datenquelle"
         },
         "errors": {
@@ -75,17 +74,47 @@
       },
       "confirm_delete": {
         "title": "Aktie löschen",
-        "description": "Möchtest du die Aktie \"{kuerzel}\" wirklich aus dem Portfolio entfernen?",
+        "description": "Möchtest du die Aktie \"{kuerzel}\" wirklich aus dem Portfolio entfernen?\n\n⚠️ Keine Buchung in der Transaktionshistorie – nutze 'Verkaufen' für eine buchhalterische Erfassung.",
         "data": {
-          "confirm": "Ja, Aktie löschen"
+          "confirm": "Ja, Aktie löschen (ohne Buchung)"
+        }
+      },
+      "sell_select": {
+        "title": "Aktie verkaufen – Auswahl",
+        "description": "Wähle die Aktie, die du verkauft hast.",
+        "data": {
+          "stock_id": "Aktie"
+        }
+      },
+      "sell_details": {
+        "title": "Aktie verkaufen – Details",
+        "description": "{kuerzel}  |  Kaufkurs: {kaufkurs} €  |  Stückzahl: {stueckzahl}",
+        "data": {
+          "verkaufskurs": "Verkaufskurs pro Stück (€)",
+          "verkaufsdatum": "Verkaufsdatum"
+        },
+        "errors": {
+          "invalid_kurs": "Bitte einen gültigen Verkaufskurs eingeben (> 0)"
+        }
+      },
+      "sell_confirm": {
+        "title": "Aktie verkaufen – Bestätigung",
+        "description": "{summary}\n\n✅ Bei Bestätigung wird die Transaktion in InfluxDB gespeichert und die Kurshistorie gelöscht.",
+        "data": {
+          "confirm": "Ja, Verkauf buchen"
         }
       },
       "settings": {
         "title": "Einstellungen",
         "data": {
-          "data_source": "Kursquelle",
+          "data_source": "Standard-Kursquelle",
           "scan_interval": "Aktualisierungsintervall (Minuten)",
-          "fmp_api_key": "FMP API-Key (optional, für Analysten-Kursziele)"
+          "fmp_api_key": "FMP API-Key (optional, für Analysten-Kursziele)",
+          "influx_url": "InfluxDB URL (z.B. http://192.168.1.10:8086)",
+          "influx_token": "InfluxDB Token",
+          "influx_org": "InfluxDB Organisation",
+          "influx_bucket": "InfluxDB Bucket",
+          "steuersatz": "Persönlicher Steuersatz (% – z.B. 26.375 für dt. Abgeltungssteuer)"
         }
       }
     },
