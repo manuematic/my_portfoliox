@@ -292,7 +292,8 @@ class MyPortfolioCoordinator(DataUpdateCoordinator):
             self._session, cfg["base_url"], cfg["token"], cfg["org"], cfg["bucket"], kuerzel
         )
         history = await _influx.query_price_history(
-            self._session, cfg["base_url"], cfg["token"], cfg["org"], cfg["bucket"], kuerzel
+            self._session, cfg["base_url"], cfg["token"], cfg["org"], cfg["bucket"], kuerzel,
+            days=400,
         )
         entry = {**smas, "preis_history": history, "_ts": now}
         self._sma_cache[kuerzel] = entry
