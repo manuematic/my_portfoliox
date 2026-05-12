@@ -115,7 +115,7 @@ class MyPortfolioChartCard extends HTMLElement {
       return `<div class="no-data">Keine Daten – warte auf InfluxDB-Befüllung</div>`;
 
     const st = this._st;
-    const W = 800, H = 300, padL = 55, padR = 18, padT = 16, padB = 36;
+    const W = 800, H = 360, padL = 55, padR = 18, padT = 16, padB = 36;
     const cW = W - padL - padR, cH = H - padT - padB;
     const n  = prices.length;
 
@@ -395,8 +395,7 @@ class MyPortfolioChartCard extends HTMLElement {
         .sma200-btn.active{background:rgba(167,139,250,.2);border-color:#a78bfa;color:#c4b5fd}
         .trend-btn.active{background:rgba(245,158,11,.2);border-color:#f59e0b;color:#fcd34d}
         .kz-btn.active{background:rgba(34,197,94,.2);border-color:#22c55e;color:#86efac}
-        .main-layout{display:flex;gap:0;align-items:flex-start}
-        .chart-wrap{flex:1;min-width:0;padding:0 .6rem 0 1rem}
+        .chart-wrap{padding:0 1rem .4rem}
         .chart-svg{width:100%;height:auto;display:block}
         .axis-lbl{font-family:'DM Mono',monospace;font-size:10px;fill:rgba(255,255,255,.35)}
         .grid-line{stroke:rgba(255,255,255,.06);stroke-width:1}
@@ -404,8 +403,10 @@ class MyPortfolioChartCard extends HTMLElement {
         .price-lbl{font-family:'DM Mono',monospace;font-size:11px;font-weight:500}
         .no-data{height:200px;display:flex;align-items:center;justify-content:center;
           color:var(--secondary-text-color);font-family:'DM Mono',monospace;font-size:.85rem;text-align:center;padding:1rem}
-        .info-panel{width:200px;flex-shrink:0;padding:.4rem 1.2rem .4rem .4rem;display:flex;flex-direction:column;gap:0}
-        .info-section{padding:.3rem 0}
+        .info-panel{display:grid;grid-template-columns:repeat(4,1fr);gap:0;
+          padding:.5rem 1.2rem .3rem;border-top:1px solid rgba(255,255,255,.06);margin-top:.2rem}
+        .info-section{padding:.3rem .6rem}
+        .info-section:not(:last-child){border-right:1px solid rgba(255,255,255,.06)}
         .info-sec-title{font-size:.65rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;
           color:var(--secondary-text-color);margin-bottom:.3rem;padding-bottom:.2rem;
           border-bottom:1px solid rgba(255,255,255,.06)}
@@ -413,7 +414,7 @@ class MyPortfolioChartCard extends HTMLElement {
         .kz-label{font-size:.72rem;color:var(--secondary-text-color);font-family:'Outfit',sans-serif;flex-shrink:0;white-space:nowrap}
         .kz-value{font-size:.78rem;font-family:'DM Mono',monospace;font-weight:500;text-align:right;white-space:nowrap}
         .kz-sub{font-size:.68rem}
-        .kz-divider{height:1px;background:rgba(255,255,255,.05);margin:.1rem 0}
+        .kz-divider{display:none}
         .legend{display:flex;gap:1rem;padding:.4rem 1.6rem 0;flex-wrap:wrap}
         .leg-item{display:flex;align-items:center;gap:.35rem;font-size:.72rem;color:var(--secondary-text-color);font-family:'DM Mono',monospace}
         .leg-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
@@ -445,11 +446,8 @@ class MyPortfolioChartCard extends HTMLElement {
           ${kzVal ? `<button class="ind-btn kz-btn${st.kursziel?" active":""}" onclick="this.getRootNode().host._toggle('kursziel')">Kursziel</button>` : ""}
         </div>
 
-        <div class="main-layout">
-          <div class="chart-wrap">${chartContent}</div>
-          ${this._buildInfoPanel(prices)}
-        </div>
-
+        <div class="chart-wrap">${chartContent}</div>
+        ${this._buildInfoPanel(prices)}
         ${legend}
       </ha-card>`;
   }
