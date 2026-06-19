@@ -111,3 +111,35 @@ async def fetch_price_yahoo(
 
     _LOGGER.error("Yahoo: '%s' nicht abrufbar (alle Hosts fehlgeschlagen)", symbol)
     return _EMPTY.copy()
+
+
+async def search_ticker(
+    session: aiohttp.ClientSession,
+    query: str,
+) -> str:
+    """Yahoo Finance Ticker-Symbol für eine ISIN/WKN/Bezeichnung ermitteln."""
+    search_url = "https://query2.finance.yahoo.com/v1/finance/search"
+    params = {
+        "q": query.strip(),
+        "quotesCount": 5,
+        "newsCount": 0,
+        "enableFuzzyQuery": "false",
+        "lang": "en-US",
+    }
+    try:
+        async with session.get(
+            search_url,
+            params=params,
+            headers=_YAHOO_HEADERS,
+            timeout=aiohttp.ClientTimeout(total=15),
+        ) as resp:
+            if resp.status != 200:
+                _LOGGER.debug("Yahoo Search: HTTP %s fuer '%s'", resp.status, query)
+                return ""
+            data = await resp.json(content_type=None)
+            for quote in data.get("quotes", []):
+                if quote.get("quoteType") in ("EQUITY", "ETF", "MUTUALFUND"):
+                    return quote.get("symbol", "")
+    except Exception as err:  # pylint: disable=broad-except
+        _LOGGER.debug("Yahoo Search: Fehler fuer '%s': %s", query, err)
+    return ""

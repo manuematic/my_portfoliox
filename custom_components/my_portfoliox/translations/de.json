@@ -28,7 +28,19 @@
         }
       },
       "add_stock": {
-        "title": "Neue Aktie hinzufügen",
+        "title": "Neue Aktie – Kennung",
+        "description": "Gib ISIN oder WKN ein. Mit aktivierter Auto-Suche werden Börsenkürzel und Bezeichnung automatisch ermittelt.",
+        "data": {
+          "isin": "ISIN (z.B. DE0005140008)",
+          "wkn": "WKN (z.B. 514000)",
+          "auto_lookup": "Börsenkürzel und Bezeichnung automatisch suchen"
+        },
+        "errors": {
+          "isin_or_wkn_required": "Bitte mindestens ISIN oder WKN eingeben."
+        }
+      },
+      "add_stock_details": {
+        "title": "Neue Aktie – Details",
         "data": {
           "bezeichnung": "Bezeichnung (z.B. BASF SE, Apple Inc.)",
           "wkn": "WKN (optional)",

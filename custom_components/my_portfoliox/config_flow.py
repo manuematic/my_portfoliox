@@ -7,6 +7,7 @@ import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.core import callback
 from homeassistant.helpers import selector
+from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .const import (
     DOMAIN,
@@ -169,6 +170,7 @@ class MyPortfolioOptionsFlow(config_entries.OptionsFlow):
     def __init__(self) -> None:
         self._selected_stock_id: str | None = None
         self._sell_result: dict | None = None
+        self._prefill: dict = {}
 
     # ── Hauptmenü ─────────────────────────────────────────────────────────
 
@@ -210,9 +212,58 @@ class MyPortfolioOptionsFlow(config_entries.OptionsFlow):
             }),
         )
 
-    # ── Aktie hinzufügen ──────────────────────────────────────────────────
+    # ── Aktie hinzufügen: Schritt 1 – ISIN/WKN + optionaler Lookup ───────
 
     async def async_step_add_stock(self, user_input=None):
+        errors: dict[str, str] = {}
+
+        if user_input is not None:
+            isin = str(user_input.get(ATTR_ISIN, "")).strip().upper()
+            wkn  = str(user_input.get(ATTR_WKN,  "")).strip().upper()
+
+            if not isin and not wkn:
+                errors["base"] = "isin_or_wkn_required"
+            else:
+                self._prefill = {ATTR_ISIN: isin, ATTR_WKN: wkn}
+
+                if user_input.get("auto_lookup", False):
+                    query = isin or wkn
+                    session = async_get_clientsession(self.hass)
+                    from .ing import fetch_instrument_info
+                    from .yahoo_finance import search_ticker
+                    ing_info = await fetch_instrument_info(session, query)
+                    kuerzel  = await search_ticker(session, query)
+
+                    if ing_info.get("bezeichnung"):
+                        self._prefill[ATTR_BEZEICHNUNG] = ing_info["bezeichnung"]
+                    if ing_info.get("isin"):
+                        self._prefill[ATTR_ISIN] = ing_info["isin"]
+                    if ing_info.get("wkn"):
+                        self._prefill[ATTR_WKN] = ing_info["wkn"]
+                    if kuerzel:
+                        self._prefill[ATTR_KUERZEL] = kuerzel
+
+                return await self.async_step_add_stock_details()
+
+        return self.async_show_form(
+            step_id="add_stock",
+            data_schema=vol.Schema({
+                vol.Optional(ATTR_ISIN, default=""): selector.selector(
+                    {"text": {"type": "text"}}
+                ),
+                vol.Optional(ATTR_WKN, default=""): selector.selector(
+                    {"text": {"type": "text"}}
+                ),
+                vol.Optional("auto_lookup", default=True): selector.selector(
+                    {"boolean": {}}
+                ),
+            }),
+            errors=errors,
+        )
+
+    # ── Aktie hinzufügen: Schritt 2 – vollständiges Formular ─────────────
+
+    async def async_step_add_stock_details(self, user_input=None):
         errors: dict[str, str] = {}
         coordinator = self._get_coordinator()
         data_source = coordinator.data_source if coordinator else SOURCE_YAHOO
@@ -232,8 +283,8 @@ class MyPortfolioOptionsFlow(config_entries.OptionsFlow):
                 return self.async_create_entry(title="", data=_current_options(self.config_entry))
 
         return self.async_show_form(
-            step_id="add_stock",
-            data_schema=_stock_schema(data_source=data_source),
+            step_id="add_stock_details",
+            data_schema=_stock_schema(defaults=self._prefill, data_source=data_source),
             errors=errors,
         )
 

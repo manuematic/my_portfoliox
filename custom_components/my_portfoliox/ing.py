@@ -109,3 +109,36 @@ async def fetch_price_ing(
         _LOGGER.error("ING: Unerwarteter Fehler fuer ISIN '%s': %s", isin, err)
 
     return _EMPTY.copy()
+
+
+async def fetch_instrument_info(
+    session: aiohttp.ClientSession,
+    isin_or_wkn: str,
+) -> dict:
+    """Stammdaten (Name, ISIN, WKN) von der ING-API abrufen."""
+    query = isin_or_wkn.strip().upper()
+    if not query:
+        return {}
+
+    url = f"{ING_API_BASE}/instrument-header"
+    params = {"isinOrSearchTerm": query}
+
+    try:
+        async with session.get(
+            url,
+            params=params,
+            headers=_ING_HEADERS,
+            timeout=aiohttp.ClientTimeout(total=15),
+        ) as resp:
+            if resp.status != 200:
+                _LOGGER.debug("ING Info: HTTP %s fuer '%s'", resp.status, query)
+                return {}
+            data = await resp.json(content_type=None)
+            return {
+                "bezeichnung": data.get("name", ""),
+                "isin":        data.get("isin", ""),
+                "wkn":         data.get("wkn", ""),
+            }
+    except Exception as err:  # pylint: disable=broad-except
+        _LOGGER.debug("ING Info: Fehler fuer '%s': %s", query, err)
+        return {}
