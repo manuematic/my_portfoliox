@@ -1,7 +1,7 @@
 # My Portfolio X
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/hacs/integration)
-[![Version](https://img.shields.io/badge/Version-0.1.0-blue.svg)]()
+[![Version](https://img.shields.io/badge/Version-0.2.0-blue.svg)]()
 [![HA Version](https://img.shields.io/badge/Home%20Assistant-2024.1%2B-blue.svg)](https://www.home-assistant.io/)
 
 Eine Home Assistant Custom Integration zur Verwaltung und Überwachung von Aktienportfolios.
@@ -100,10 +100,21 @@ Eine Home Assistant Custom Integration zur Verwaltung und Überwachung von Aktie
 
 ### Aktie hinzufügen
 
+**Schritt 1 – Kennung eingeben**
+
+Gib entweder die ISIN oder die WKN ein und aktiviere „Auto-Suche":
+
+| Eingabe | Auto-Suche liefert |
+|---|---|
+| ISIN (z.B. `DE0007164600`) | Yahoo-Kürzel + WKN (bei DE-ISINs direkt abgeleitet) |
+| WKN (z.B. `716460`) | ISIN (via ING-API) + Yahoo-Kürzel (via ISIN) |
+
+**Schritt 2 – Details vervollständigen**
+
 | Feld | Pflicht | Beschreibung |
 |---|---|---|
-| Bezeichnung | ✅ | Anzeigename (z.B. „SAP SE") |
-| Börsenkürzel | ✅ | z.B. `AAPL`, `SAP.DE` |
+| Bezeichnung | ✅ | Anzeigename (z.B. „SAP SE") – wird automatisch befüllt |
+| Börsenkürzel | ✅ | z.B. `AAPL`, `SAP.DE` – wird automatisch befüllt |
 | Datenquelle | ✅ | ING (empfohlen) oder Yahoo Finance |
 | ISIN | ✅ bei ING | z.B. `DE0007164600` |
 | WKN | ☐ | z.B. `716460` |

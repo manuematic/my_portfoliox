@@ -1,7 +1,7 @@
 {
   "domain": "my_portfoliox",
   "name": "My Portfolio X",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "documentation": "https://codeberg.org/tuxoid/my_portfoliox",
   "issue_tracker": "https://codeberg.org/tuxoid/my_portfoliox/issues",
   "codeowners": [

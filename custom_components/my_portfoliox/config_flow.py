@@ -227,21 +227,32 @@ class MyPortfolioOptionsFlow(config_entries.OptionsFlow):
                 self._prefill = {ATTR_ISIN: isin, ATTR_WKN: wkn}
 
                 if user_input.get("auto_lookup", False):
-                    query = isin or wkn
                     session = async_get_clientsession(self.hass)
                     from .ing import fetch_instrument_info
                     from .yahoo_finance import search_ticker
-                    ing_info = await fetch_instrument_info(session, query)
-                    kuerzel  = await search_ticker(session, query)
+
+                    # ING: Bezeichnung + Kreuzidentifikatoren (ISIN↔WKN)
+                    ing_info = await fetch_instrument_info(session, isin or wkn)
 
                     if ing_info.get("bezeichnung"):
                         self._prefill[ATTR_BEZEICHNUNG] = ing_info["bezeichnung"]
                     if ing_info.get("isin"):
-                        self._prefill[ATTR_ISIN] = ing_info["isin"]
+                        isin = ing_info["isin"]
+                        self._prefill[ATTR_ISIN] = isin
                     if ing_info.get("wkn"):
-                        self._prefill[ATTR_WKN] = ing_info["wkn"]
-                    if kuerzel:
-                        self._prefill[ATTR_KUERZEL] = kuerzel
+                        wkn = ing_info["wkn"]
+                        self._prefill[ATTR_WKN] = wkn
+
+                    # WKN aus DE-ISIN ableiten wenn noch nicht bekannt
+                    if isin.startswith("DE") and len(isin) == 12 and not wkn:
+                        self._prefill[ATTR_WKN] = isin[5:11]
+
+                    # Yahoo: ISIN bevorzugen (zuverlässiger als WKN)
+                    yahoo_query = isin or wkn
+                    if yahoo_query:
+                        kuerzel = await search_ticker(session, yahoo_query)
+                        if kuerzel:
+                            self._prefill[ATTR_KUERZEL] = kuerzel
 
                 return await self.async_step_add_stock_details()
 
