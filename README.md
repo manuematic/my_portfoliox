@@ -1,7 +1,7 @@
 # My Portfolio X
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/hacs/integration)
-[![Version](https://img.shields.io/badge/Version-0.2.0-blue.svg)]()
+[![Version](https://img.shields.io/badge/Version-0.3.0-blue.svg)]()
 [![HA Version](https://img.shields.io/badge/Home%20Assistant-2024.1%2B-blue.svg)](https://www.home-assistant.io/)
 
 Eine Home Assistant Custom Integration zur Verwaltung und Überwachung von Aktienportfolios.

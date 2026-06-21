@@ -1,7 +1,10 @@
 """Config flow + vollständiger Options-Flow für My Portfolio X."""
 from __future__ import annotations
 
+import json
 import logging
+from datetime import datetime
+from pathlib import Path
 
 import voluptuous as vol
 from homeassistant import config_entries
@@ -193,6 +196,10 @@ class MyPortfolioOptionsFlow(config_entries.OptionsFlow):
                 return await self.async_step_select_stock()
             if action == "sell":
                 return await self.async_step_sell_select()
+            if action == "export":
+                return await self.async_step_portfolio_export()
+            if action == "import":
+                return await self.async_step_portfolio_import()
             if action == "settings":
                 return await self.async_step_settings()
 
@@ -200,6 +207,8 @@ class MyPortfolioOptionsFlow(config_entries.OptionsFlow):
         if stocks:
             actions.append(selector.SelectOptionDict(value="edit",     label="✏️  Aktie bearbeiten / löschen"))
             actions.append(selector.SelectOptionDict(value="sell",     label="💰 Aktie verkaufen"))
+        actions.append(selector.SelectOptionDict(value="export",   label="📤 Portfolio exportieren"))
+        actions.append(selector.SelectOptionDict(value="import",   label="📥 Portfolio importieren"))
         actions.append(selector.SelectOptionDict(value="settings", label="⚙️  Einstellungen"))
 
         return self.async_show_form(
@@ -595,6 +604,76 @@ class MyPortfolioOptionsFlow(config_entries.OptionsFlow):
                                 "unit_of_measurement": "%"}}
                 ),
             }),
+        )
+
+    # ── Portfolio exportieren ─────────────────────────────────────────────
+
+    async def async_step_portfolio_export(self, user_input=None):
+        coordinator = self._get_coordinator()
+
+        if user_input is not None:
+            return await self.async_step_init()
+
+        stocks = coordinator.get_stocks() if coordinator else {}
+        portfolio_name = coordinator.portfolio_name if coordinator else "portfolio"
+
+        export_data = {
+            "version": 1,
+            "integration": DOMAIN,
+            "portfolio_name": portfolio_name,
+            "exported_at": datetime.now().isoformat(),
+            "stocks": stocks,
+        }
+        json_str = json.dumps(export_data, ensure_ascii=False, indent=2)
+
+        safe_name = portfolio_name.replace(" ", "_").replace("/", "-")
+        filename = f"my_portfoliox_export_{safe_name}.json"
+        path = Path(self.hass.config.config_dir) / filename
+        try:
+            path.write_text(json_str, encoding="utf-8")
+            path_str = str(path)
+        except OSError as exc:
+            _LOGGER.error("Export-Datei konnte nicht geschrieben werden: %s", exc)
+            path_str = f"(Fehler: {exc})"
+
+        return self.async_show_form(
+            step_id="portfolio_export",
+            data_schema=vol.Schema({}),
+            description_placeholders={
+                "count": str(len(stocks)),
+                "path":  path_str,
+            },
+        )
+
+    # ── Portfolio importieren ─────────────────────────────────────────────
+
+    async def async_step_portfolio_import(self, user_input=None):
+        errors: dict[str, str] = {}
+        coordinator = self._get_coordinator()
+
+        if user_input is not None:
+            json_str = (user_input.get("json_data") or "").strip()
+            try:
+                data = json.loads(json_str)
+            except (json.JSONDecodeError, ValueError):
+                errors["json_data"] = "invalid_json"
+            else:
+                stocks = data.get("stocks")
+                if not isinstance(stocks, dict):
+                    errors["json_data"] = "invalid_format"
+                else:
+                    if coordinator:
+                        await coordinator.async_import_stocks(stocks)
+                    return await self.async_step_init()
+
+        return self.async_show_form(
+            step_id="portfolio_import",
+            data_schema=vol.Schema({
+                vol.Required("json_data"): selector.selector(
+                    {"text": {"multiline": True}}
+                ),
+            }),
+            errors=errors,
         )
 
     # ── Hilfsmethoden ─────────────────────────────────────────────────────

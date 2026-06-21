@@ -439,6 +439,16 @@ class MyPortfolioCoordinator(DataUpdateCoordinator):
 
         return result
 
+    async def async_import_stocks(self, stocks: dict[str, dict]) -> None:
+        """Alle bestehenden Positionen durch importierte ersetzen (Migrations-Import).
+
+        Neue UUIDs werden vergeben – keine InfluxDB-Kauf-Transaktionen geschrieben.
+        """
+        self._stocks = {str(uuid.uuid4()): stock for stock in stocks.values()}
+        self._sma_cache.clear()
+        await self._async_save()
+        await self.async_request_refresh()
+
     async def _async_save(self) -> None:
         await self._store.async_save({"stocks": self._stocks})
 

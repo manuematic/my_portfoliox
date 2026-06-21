@@ -128,6 +128,21 @@
           "influx_bucket": "InfluxDB Bucket",
           "steuersatz": "Persönlicher Steuersatz (% – z.B. 26.375 für dt. Abgeltungssteuer)"
         }
+      },
+      "portfolio_export": {
+        "title": "Portfolio exportieren",
+        "description": "✅ {count} Position(en) exportiert.\n\n📄 Datei: {path}\n\nKopiere die Datei auf deine Produktiv-Instanz (SSH, Samba, File Editor) und importiere sie dort über \"Portfolio importieren\"."
+      },
+      "portfolio_import": {
+        "title": "Portfolio importieren",
+        "description": "Füge hier den Inhalt der Export-Datei ein.\n\n⚠️ Alle bestehenden Positionen in diesem Portfolio werden ersetzt.",
+        "data": {
+          "json_data": "Export-JSON (Inhalt der Datei einfügen)"
+        },
+        "errors": {
+          "invalid_json": "Ungültiges JSON-Format – bitte den gesamten Dateiinhalt einfügen.",
+          "invalid_format": "Ungültiges Export-Format – kein 'stocks'-Schlüssel gefunden."
+        }
       }
     },
     "error": {
