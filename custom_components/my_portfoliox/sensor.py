@@ -30,6 +30,8 @@ from .const import (
     ATTR_KURS_VORTAG,
     ATTR_TAGES_ABS,
     ATTR_TAGES_PCT,
+    ATTR_TAGES_HOCH,
+    ATTR_TAGES_TIEF,
     ATTR_KZ_HOCH,
     ATTR_KZ_TIEF,
     ATTR_KZ_MITTEL,
@@ -154,6 +156,8 @@ class StockSensor(CoordinatorEntity[MyPortfolioCoordinator], SensorEntity):
             ATTR_KURS_VORTAG:     data.get(ATTR_KURS_VORTAG),
             ATTR_TAGES_ABS:       data.get(ATTR_TAGES_ABS),
             ATTR_TAGES_PCT:       data.get(ATTR_TAGES_PCT),
+            ATTR_TAGES_HOCH:      data.get(ATTR_TAGES_HOCH),
+            ATTR_TAGES_TIEF:      data.get(ATTR_TAGES_TIEF),
             # FMP Analysten-Daten
             ATTR_KZ_HOCH:         data.get(ATTR_KZ_HOCH),
             ATTR_KZ_TIEF:         data.get(ATTR_KZ_TIEF),

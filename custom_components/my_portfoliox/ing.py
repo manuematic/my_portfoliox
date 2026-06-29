@@ -37,6 +37,8 @@ _EMPTY = {
     "kurs_vortag":         None,
     "tages_aenderung_abs": None,
     "tages_aenderung_pct": None,
+    "tageshoch":           None,
+    "tagestief":           None,
 }
 
 
@@ -101,6 +103,8 @@ async def fetch_price_ing(
                 "kurs_vortag":         vortag,
                 "tages_aenderung_abs": round(tages_abs, 4) if tages_abs is not None else None,
                 "tages_aenderung_pct": round(tages_pct, 4) if tages_pct is not None else None,
+                "tageshoch":           None,  # ING API liefert keine Tageshoch/-tief
+                "tagestief":           None,
             }
 
     except (aiohttp.ClientError, asyncio.TimeoutError) as err:

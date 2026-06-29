@@ -119,8 +119,10 @@ class MyPortfolioChartCard extends HTMLElement {
     const cW = W - padL - padR, cH = H - padT - padB;
     const n  = prices.length;
 
-    const closes = prices.map(p => p.close);
-    const kzVal  = parseFloat(_getSensorAttr(this._hass, st.symbol, "kursziel_mittel")) || null;
+    const closes    = prices.map(p => p.close);
+    const kzVal     = parseFloat(_getSensorAttr(this._hass, st.symbol, "kursziel_mittel")) || null;
+    const limOben   = parseFloat(_getSensorAttr(this._hass, st.symbol, "limitoben"))  || null;
+    const limUnten  = parseFloat(_getSensorAttr(this._hass, st.symbol, "limitunten")) || null;
     const allVals = [...closes];
 
     const sma20v  = st.sma20  ? this._sma(prices, 20)  : [];
@@ -133,6 +135,8 @@ class MyPortfolioChartCard extends HTMLElement {
     if (st.sma200) allVals.push(...sma200v.filter(v => v !== null));
     if (st.trend)  allVals.push(...trendv);
     if (st.kursziel && kzVal) allVals.push(kzVal);
+    if (limOben)  allVals.push(limOben);
+    if (limUnten) allVals.push(limUnten);
 
     const minV = Math.min(...allVals) * 0.998;
     const maxV = Math.max(...allVals) * 1.002;
@@ -181,6 +185,25 @@ class MyPortfolioChartCard extends HTMLElement {
               <text x="${padL+4}" y="${parseFloat(y)-4}" class="axis-lbl" fill="#f59e0b">Kauf ${kaufkurs.toFixed(2)}</text>`;
     };
 
+    const limitLines = () => {
+      let out = "";
+      if (limOben && limOben >= minV && limOben <= maxV) {
+        const y = yOf(limOben).toFixed(1);
+        out += `<line x1="${padL}" y1="${y}" x2="${W-padR}" y2="${y}"
+                  stroke="#22c55e" stroke-width="1.5" stroke-dasharray="5,3" opacity="0.7"/>
+                <text x="${W-padR-3}" y="${parseFloat(y)-4}" text-anchor="end"
+                  class="axis-lbl" fill="#22c55e">Lim ↑ ${limOben.toFixed(2)}</text>`;
+      }
+      if (limUnten && limUnten >= minV && limUnten <= maxV) {
+        const y = yOf(limUnten).toFixed(1);
+        out += `<line x1="${padL}" y1="${y}" x2="${W-padR}" y2="${y}"
+                  stroke="#ef4444" stroke-width="1.5" stroke-dasharray="5,3" opacity="0.7"/>
+                <text x="${W-padR-3}" y="${parseFloat(y)-4}" text-anchor="end"
+                  class="axis-lbl" fill="#ef4444">Lim ↓ ${limUnten.toFixed(2)}</text>`;
+      }
+      return out;
+    };
+
     const yLabels = Array.from({ length: 5 }, (_, i) => {
       const v = minV + (i / 4) * rng;
       const y = yOf(v);
@@ -213,6 +236,7 @@ class MyPortfolioChartCard extends HTMLElement {
         ${xLabels.join("")}
         <path d="${fillPath}" fill="url(#${fillId})"/>
         ${kaufLine()}
+        ${limitLines()}
         <path d="${linePath}" fill="none" stroke="${lineClr}" stroke-width="2"
               stroke-linejoin="round" stroke-linecap="round"/>
         ${st.sma20  ? smaPath(sma20v,  "#34d399") : ""}
@@ -244,6 +268,10 @@ class MyPortfolioChartCard extends HTMLElement {
     const gewinn   = parseFloat(_getSensorAttr(this._hass, sym, "gewinn"));
     const tgAbs    = parseFloat(_getSensorAttr(this._hass, sym, "tages_aenderung_abs"));
     const tgPct    = parseFloat(_getSensorAttr(this._hass, sym, "tages_aenderung_pct"));
+    const tgHoch   = parseFloat(_getSensorAttr(this._hass, sym, "tageshoch"));
+    const tgTief   = parseFloat(_getSensorAttr(this._hass, sym, "tagestief"));
+    const limOben  = parseFloat(_getSensorAttr(this._hass, sym, "limitoben"));
+    const limUnten = parseFloat(_getSensorAttr(this._hass, sym, "limitunten"));
     const kzMittel = parseFloat(_getSensorAttr(this._hass, sym, "kursziel_mittel"));
     const kzHoch   = parseFloat(_getSensorAttr(this._hass, sym, "kursziel_hoch"));
     const kzTief   = parseFloat(_getSensorAttr(this._hass, sym, "kursziel_tief"));
@@ -296,14 +324,18 @@ class MyPortfolioChartCard extends HTMLElement {
           <div class="info-sec-title">Kurs</div>
           ${row("Aktuell", `${fmt(kurs, 3)} €`, (!isNaN(tgPct) && tgPct >= 0) ? "#22c55e" : "#ef4444")}
           ${row("Tagesänderung", `${sign(tgAbs)}${fmt(tgAbs, 3)} € (${sign(tgPct)}${fmt(tgPct)}%)`, tgClr)}
+          ${!isNaN(tgHoch) ? row("Tageshoch", `${fmt(tgHoch, 3)} €`, "#22c55e") : ""}
+          ${!isNaN(tgTief) ? row("Tagestief", `${fmt(tgTief, 3)} €`, "#ef4444") : ""}
           ${row("Kaufkurs", `${fmt(kaufkurs, 3)} €`)}
           ${row("Gewinn/Verlust", `${sign(gesamtGewinnAbs)}${fmt(gesamtGewinnAbs)} € (${pct(gewinn)})`, gwClr)}
         </div>
         ${divider()}
         <div class="info-section">
-          <div class="info-sec-title">52-Wochen</div>
+          <div class="info-sec-title">52-Wochen / Limits</div>
           ${row("52W Hoch", `${fmt(w52h, 3)} €`, "#22c55e")}
           ${row("52W Tief", `${fmt(w52t, 3)} €`, "#ef4444")}
+          ${!isNaN(limOben)  && limOben  > 0 ? row("Limit ↑", `${fmt(limOben, 3)} €`,  "#22c55e") : ""}
+          ${!isNaN(limUnten) && limUnten > 0 ? row("Limit ↓", `${fmt(limUnten, 3)} €`, "#ef4444") : ""}
         </div>
         ${divider()}
         <div class="info-section">
@@ -355,10 +387,15 @@ class MyPortfolioChartCard extends HTMLElement {
       chartContent = this._drawChart(prices);
     }
 
+    const limObenLeg  = parseFloat(_getSensorAttr(this._hass, curSym, "limitoben"))  || null;
+    const limUntenLeg = parseFloat(_getSensorAttr(this._hass, curSym, "limitunten")) || null;
+
     const legend = `
       <div class="legend">
         <span class="leg-item"><span class="leg-dot" style="background:#aaa"></span>Kurs</span>
         <span class="leg-item"><span class="leg-dash" style="border-color:#f59e0b"></span>Kaufkurs</span>
+        ${limObenLeg  ? `<span class="leg-item"><span class="leg-dash" style="border-color:#22c55e"></span>Limit ↑</span>` : ""}
+        ${limUntenLeg ? `<span class="leg-item"><span class="leg-dash" style="border-color:#ef4444"></span>Limit ↓</span>` : ""}
         ${st.sma20  ? `<span class="leg-item"><span class="leg-dash" style="border-color:#34d399"></span>SMA 20</span>`  : ""}
         ${st.sma50  ? `<span class="leg-item"><span class="leg-dash" style="border-color:#60a5fa"></span>SMA 50</span>`  : ""}
         ${st.sma200 ? `<span class="leg-item"><span class="leg-dash" style="border-color:#a78bfa"></span>SMA 200</span>` : ""}
@@ -397,26 +434,26 @@ class MyPortfolioChartCard extends HTMLElement {
         .kz-btn.active{background:rgba(34,197,94,.2);border-color:#22c55e;color:#86efac}
         .chart-wrap{padding:0 1rem .4rem}
         .chart-svg{width:100%;height:auto;display:block}
-        .axis-lbl{font-family:'DM Mono',monospace;font-size:10px;fill:rgba(255,255,255,.35)}
+        .axis-lbl{font-family:'DM Mono',monospace;font-size:11px;fill:rgba(255,255,255,.35)}
         .grid-line{stroke:rgba(255,255,255,.06);stroke-width:1}
         .grid-line-v{stroke:rgba(255,255,255,.04);stroke-width:1}
-        .price-lbl{font-family:'DM Mono',monospace;font-size:11px;font-weight:500}
+        .price-lbl{font-family:'DM Mono',monospace;font-size:12px;font-weight:500}
         .no-data{height:200px;display:flex;align-items:center;justify-content:center;
           color:var(--secondary-text-color);font-family:'DM Mono',monospace;font-size:.85rem;text-align:center;padding:1rem}
         .info-panel{display:grid;grid-template-columns:repeat(4,1fr);gap:0;
           padding:.5rem 1.2rem .3rem;border-top:1px solid rgba(255,255,255,.06);margin-top:.2rem}
         .info-section{padding:.3rem .6rem}
         .info-section:not(:last-child){border-right:1px solid rgba(255,255,255,.06)}
-        .info-sec-title{font-size:.65rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;
+        .info-sec-title{font-size:.73rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;
           color:var(--secondary-text-color);margin-bottom:.3rem;padding-bottom:.2rem;
           border-bottom:1px solid rgba(255,255,255,.06)}
         .kz-row{display:flex;justify-content:space-between;align-items:baseline;gap:.4rem;padding:.12rem 0}
-        .kz-label{font-size:.72rem;color:var(--secondary-text-color);font-family:'Outfit',sans-serif;flex-shrink:0;white-space:nowrap}
-        .kz-value{font-size:.78rem;font-family:'DM Mono',monospace;font-weight:500;text-align:right;white-space:nowrap}
-        .kz-sub{font-size:.68rem}
+        .kz-label{font-size:.82rem;color:var(--secondary-text-color);font-family:'Outfit',sans-serif;flex-shrink:0;white-space:nowrap}
+        .kz-value{font-size:.88rem;font-family:'DM Mono',monospace;font-weight:500;text-align:right;white-space:nowrap}
+        .kz-sub{font-size:.76rem}
         .kz-divider{display:none}
         .legend{display:flex;gap:1rem;padding:.4rem 1.6rem 0;flex-wrap:wrap}
-        .leg-item{display:flex;align-items:center;gap:.35rem;font-size:.72rem;color:var(--secondary-text-color);font-family:'DM Mono',monospace}
+        .leg-item{display:flex;align-items:center;gap:.35rem;font-size:.80rem;color:var(--secondary-text-color);font-family:'DM Mono',monospace}
         .leg-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
         .leg-dash{width:18px;height:0;border-bottom:2px dashed;flex-shrink:0}
       </style>

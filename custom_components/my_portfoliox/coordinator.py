@@ -43,6 +43,8 @@ from .const import (
     ATTR_KURS_VORTAG,
     ATTR_TAGES_ABS,
     ATTR_TAGES_PCT,
+    ATTR_TAGES_HOCH,
+    ATTR_TAGES_TIEF,
     ATTR_KZ_HOCH,
     ATTR_KZ_TIEF,
     ATTR_KZ_MITTEL,
@@ -191,12 +193,14 @@ class MyPortfolioCoordinator(DataUpdateCoordinator):
             stock_data[ATTR_KURS_VORTAG] = (
                 price_data.get("kurs_vortag") or stock.get(ATTR_KURS_VORTAG)
             )
-            stock_data[ATTR_TAGES_ABS] = (
+            stock_data[ATTR_TAGES_ABS]  = (
                 price_data.get("tages_aenderung_abs") or stock.get(ATTR_TAGES_ABS)
             )
-            stock_data[ATTR_TAGES_PCT] = (
+            stock_data[ATTR_TAGES_PCT]  = (
                 price_data.get("tages_aenderung_pct") or stock.get(ATTR_TAGES_PCT)
             )
+            stock_data[ATTR_TAGES_HOCH] = price_data.get("tageshoch")
+            stock_data[ATTR_TAGES_TIEF] = price_data.get("tagestief")
 
             preis = stock.get(ATTR_PREIS) or 0.0
             if aktueller_kurs is not None and preis:

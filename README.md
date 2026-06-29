@@ -1,7 +1,7 @@
 # My Portfolio X
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/hacs/integration)
-[![Version](https://img.shields.io/badge/Version-0.3.0-blue.svg)]()
+[![Version](https://img.shields.io/badge/Version-0.3.1-blue.svg)]()
 [![HA Version](https://img.shields.io/badge/Home%20Assistant-2024.1%2B-blue.svg)](https://www.home-assistant.io/)
 
 Eine Home Assistant Custom Integration zur Verwaltung und Überwachung von Aktienportfolios.
@@ -34,6 +34,11 @@ Eine Home Assistant Custom Integration zur Verwaltung und Überwachung von Aktie
 - Konfigurierter **persönlicher Steuersatz** (z.B. 26,375 % dt. Abgeltungssteuer + Soli)
 - Steuer wird nur auf **positive** Gewinne berechnet
 - Bilanz-Card zeigt alle realisierten Verkäufe mit Brutto/Netto/Steuer
+
+### Portfolio-Migration (Export & Import)
+- Portfolio per Mausklick als JSON-Datei exportieren
+- JSON-Import auf einer anderen Home-Assistant-Instanz (z.B. Dev → Prod)
+- Kauf-Transaktionen in InfluxDB werden beim Import **nicht** neu geschrieben
 
 ### Dashboard-Visualisierung
 - **10 spezialisierte Lovelace-Cards** – keine externe Card-Library nötig
@@ -130,6 +135,24 @@ Gib entweder die ISIN oder die WKN ein und aktiviere „Auto-Suche":
 3. Vorschau prüfen (Erlös, Gewinn brutto, Steuer, Gewinn netto)
 4. Bestätigen → Transaktion wird in InfluxDB gespeichert, Kurshistorie gelöscht, Aktie aus Portfolio entfernt
 
+### Portfolio migrieren (📤 / 📥 Export & Import)
+
+Zum Übertragen eines Portfolios auf eine andere Home-Assistant-Instanz (z.B. Entwicklungs- → Produktivsystem):
+
+**Auf der Quell-Instanz (Export):**
+
+1. **Konfigurieren → „📤 Portfolio exportieren"**
+2. Die Datei `my_portfoliox_export_{PortfolioName}.json` wird automatisch in `/config/` gespeichert
+3. Datei auf die Ziel-Instanz kopieren (SSH, Samba, HA File Editor o.ä.)
+
+**Auf der Ziel-Instanz (Import):**
+
+1. Integration neu einrichten (leer, InfluxDB-Einstellungen eintragen)
+2. **Konfigurieren → „📥 Portfolio importieren"**
+3. Den Inhalt der Export-Datei in das Textfeld einfügen und bestätigen
+
+> **Hinweis:** Der Import **ersetzt alle bestehenden Positionen** im Portfolio. Die InfluxDB-Kurshistorie wird nicht importiert – sie füllt sich auf der neuen Instanz automatisch mit jedem Kursabruf. Falls beide Instanzen dieselbe InfluxDB nutzen, ist die Historie sofort verfügbar.
+
 ---
 
 ## Dashboard-Cards
@@ -182,6 +205,8 @@ type: custom:my-portfoliox-chart-card
 title: Kursverlauf
 ```
 Daten aus InfluxDB. Optionale Overlays: SMA 20 · SMA 50 · SMA 200 · Trendlinie · Analysten-Kursziel.  
+Limit-Linien (oben/unten) werden automatisch eingeblendet, wenn Kurslimits gesetzt sind.  
+Info-Panel zeigt Tageshoch/Tagestief (nur Yahoo Finance), 52-Wochen-Range und Limits.  
 Hinweis: Daten werden ab dem ersten Update gesammelt – der Chart füllt sich mit der Zeit.
 
 ### Analysten-Kursziele
@@ -220,6 +245,7 @@ Zeigt Summenzeile (Erlös / Brutto / Steuer / Netto) und Tabelle aller Verkäufe
 | `gewinn` | Performance seit Kauf in % |
 | `kurs_vortag` | Vortages-Schlusskurs |
 | `tages_aenderung_abs` / `tages_aenderung_pct` | Tagesveränderung |
+| `tageshoch` / `tagestief` | Tageshoch/-tief (nur Yahoo Finance) |
 | `sma_20` / `sma_50` / `sma_200` | Gleitende Durchschnitte (aus InfluxDB) |
 | `preis_history` | Liste `[{date, kurs}]` – max. 200 Tageskurse |
 | `kursziel_hoch/tief/mittel` | Analysten-Kursziele (FMP) |

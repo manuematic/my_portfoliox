@@ -24,6 +24,8 @@ class PriceData(TypedDict, total=False):
     kurs_vortag:          float | None
     tages_aenderung_abs:  float | None
     tages_aenderung_pct:  float | None
+    tageshoch:            float | None
+    tagestief:            float | None
 
 
 _EMPTY: PriceData = {
@@ -31,6 +33,8 @@ _EMPTY: PriceData = {
     "kurs_vortag":         None,
     "tages_aenderung_abs": None,
     "tages_aenderung_pct": None,
+    "tageshoch":           None,
+    "tagestief":           None,
 }
 
 
@@ -78,8 +82,10 @@ async def fetch_price_yahoo(
                 vortag = meta.get("previousClose") or meta.get("chartPreviousClose")
 
                 # Yahoo liefert regularMarketChange und regularMarketChangePercent
-                tages_abs = meta.get("regularMarketChange")
-                tages_pct = meta.get("regularMarketChangePercent")
+                tages_abs  = meta.get("regularMarketChange")
+                tages_pct  = meta.get("regularMarketChangePercent")
+                tageshoch  = meta.get("regularMarketDayHigh")
+                tagestief  = meta.get("regularMarketDayLow")
 
                 # Fallback: selbst berechnen wenn Yahoo-Felder fehlen
                 if kurs is not None and vortag and tages_abs is None:
@@ -92,6 +98,8 @@ async def fetch_price_yahoo(
                     "kurs_vortag":         round(float(vortag), 5)     if vortag    is not None else None,
                     "tages_aenderung_abs": round(float(tages_abs), 3)  if tages_abs is not None else None,
                     "tages_aenderung_pct": round(float(tages_pct), 2)  if tages_pct is not None else None,
+                    "tageshoch":           round(float(tageshoch), 3)   if tageshoch is not None else None,
+                    "tagestief":           round(float(tagestief), 3)   if tagestief is not None else None,
                 }
 
                 _LOGGER.debug(
