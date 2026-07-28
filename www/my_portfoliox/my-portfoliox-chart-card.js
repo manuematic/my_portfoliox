@@ -15,7 +15,7 @@ function _getSensorAttr(hass, symbol, attr) {
   if (!hass || !symbol) return null;
   for (const [, state] of Object.entries(hass.states)) {
     const a = state.attributes || {};
-    if (a.kuerzel === symbol && a.summary_key === undefined)
+    if (a.kuerzel === symbol && a.summary_key === undefined && a.integration !== "my_portfolio_candidate")
       return a[attr] ?? null;
   }
   return null;
@@ -62,6 +62,7 @@ class MyPortfolioChartCard extends HTMLElement {
     for (const [, state] of Object.entries(this._hass.states)) {
       const a = state.attributes || {};
       if (a.kuerzel === undefined || a.summary_key !== undefined) continue;
+      if (a.integration === "my_portfolio_candidate") continue;
       stocks.push({
         bezeichnung: (a.bezeichnung || a.kuerzel || "").trim(),
         kuerzel:     a.kuerzel,

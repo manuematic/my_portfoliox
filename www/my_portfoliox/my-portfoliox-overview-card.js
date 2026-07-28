@@ -33,6 +33,7 @@ class MyPortfolioOverviewCard extends HTMLElement {
     for (const [entityId, state] of Object.entries(this._hass.states)) {
       if (!entityId.startsWith("sensor.")) continue;
       const attr = state.attributes || {};
+      if (attr.integration === "my_portfolio_candidate") continue;
       const portfolio = attr.portfolio_name;
       if (!portfolio) continue;
 
@@ -60,7 +61,7 @@ class MyPortfolioOverviewCard extends HTMLElement {
             p[summaryKey] = val;
           }
         }
-      } else if (attr.kuerzel !== undefined && !summaryKey && attr.integration !== "my_portfoliox_candidate") {
+      } else if (attr.kuerzel !== undefined && !summaryKey) {
         // Aktien-Sensor
         p.stockCount++;
       }

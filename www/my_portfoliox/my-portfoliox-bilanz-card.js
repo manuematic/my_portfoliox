@@ -32,6 +32,7 @@ class MyPortfolioBilanzCard extends HTMLElement {
     for (const [, state] of Object.entries(this._hass.states)) {
       const a = state.attributes || {};
       if (a.summary_key !== "bilanz") continue;
+      if (a.integration === "my_portfolio_candidate") continue;
       if (wantPortfolio && a.portfolio_name !== wantPortfolio) continue;
       return a;
     }
