@@ -95,10 +95,40 @@ ATTR_GEWINN_NETTO      = "gewinn_netto"
 ATTR_STEUER_BETRAG     = "steuer_betrag"
 ATTR_ERLOES_GESAMT     = "erloes_gesamt"   # verkaufskurs * stueckzahl
 
-# Analysten-Attribute
+# Analysten-Attribute (FMP – benötigt API-Key, wird aktuell nicht mehr in den Cards angezeigt)
 ATTR_KZ_HOCH      = "kursziel_hoch"
 ATTR_KZ_TIEF      = "kursziel_tief"
 ATTR_KZ_MITTEL    = "kursziel_mittel"
 ATTR_KZ_ANZAHL    = "analysten_anzahl"
 ATTR_KZ_KONSENS   = "analysten_konsens"   # buy / hold / sell
 ATTR_KZ_DATUM     = "kursziel_datum"
+
+# OnVista – Technik / Dividende / Termine / Analysten (kostenlos, ohne API-Key,
+# einmal täglich ab 8 Uhr pro ISIN abgerufen, siehe coordinator._update_onvista_data)
+ONVISTA_SNAPSHOT_URL = "https://api.onvista.de/api/v1/stocks/ISIN:{isin}/snapshot"
+ONVISTA_ANALYZER_URL = (
+    "https://api.onvista.de/api/v1/stocks/{entity_value}/analyzer_recommendations"
+    "?timePeriod=MONTH_3"
+)
+ONVISTA_STOCK_PAGE_URL = "https://www.onvista.de/aktien/{isin}"
+ONVISTA_FETCH_HOUR = 8   # Uhrzeit für den täglichen Abruf
+
+ATTR_OV_SMA_20            = "ov_sma_20"
+ATTR_OV_SMA_200           = "ov_sma_200"
+ATTR_OV_RSL_30            = "ov_rsl_30"
+ATTR_OV_RSL_250           = "ov_rsl_250"
+ATTR_OV_MOMENTUM_30       = "ov_momentum_30"
+ATTR_OV_MOMENTUM_250      = "ov_momentum_250"
+ATTR_OV_DIVIDENDE         = "ov_dividende"            # letzte bekannte Dividende in €
+ATTR_OV_DIVIDENDE_RENDITE = "ov_dividende_rendite"    # in %
+ATTR_OV_NAECHSTER_TERMIN  = "ov_naechster_termin"     # z.B. "23.10.2026: Bericht 3. Quartal 2026"
+ATTR_OV_SIGNAL            = "ov_ueberkauft_ueberverkauft"  # aus RSI(20) abgeleitet
+
+ATTR_OV_KZ_MITTEL         = "ov_kursziel_mittel"
+ATTR_OV_KZ_HOCH           = "ov_kursziel_hoch"
+ATTR_OV_KZ_TIEF           = "ov_kursziel_tief"
+ATTR_OV_ANALYSTEN_ANZAHL  = "ov_analysten_anzahl"
+ATTR_OV_ANALYSTEN_KONSENS = "ov_analysten_konsens"    # "Kaufen" / "Halten" / "Verkaufen" ...
+ATTR_OV_ANALYSTEN_BUY     = "ov_analysten_buy"
+ATTR_OV_ANALYSTEN_HOLD    = "ov_analysten_hold"
+ATTR_OV_ANALYSTEN_SELL    = "ov_analysten_sell"

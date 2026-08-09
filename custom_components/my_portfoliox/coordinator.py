@@ -68,6 +68,25 @@ from .const import (
     ATTR_GEWINN_NETTO,
     ATTR_STEUER_BETRAG,
     ATTR_ERLOES_GESAMT,
+    ONVISTA_FETCH_HOUR,
+    ATTR_OV_SMA_20,
+    ATTR_OV_SMA_200,
+    ATTR_OV_RSL_30,
+    ATTR_OV_RSL_250,
+    ATTR_OV_MOMENTUM_30,
+    ATTR_OV_MOMENTUM_250,
+    ATTR_OV_DIVIDENDE,
+    ATTR_OV_DIVIDENDE_RENDITE,
+    ATTR_OV_NAECHSTER_TERMIN,
+    ATTR_OV_SIGNAL,
+    ATTR_OV_KZ_MITTEL,
+    ATTR_OV_KZ_HOCH,
+    ATTR_OV_KZ_TIEF,
+    ATTR_OV_ANALYSTEN_ANZAHL,
+    ATTR_OV_ANALYSTEN_KONSENS,
+    ATTR_OV_ANALYSTEN_BUY,
+    ATTR_OV_ANALYSTEN_HOLD,
+    ATTR_OV_ANALYSTEN_SELL,
 )
 from .yahoo_finance import fetch_price_yahoo
 from .ing import fetch_price_ing
@@ -79,6 +98,18 @@ _LOGGER = logging.getLogger(__name__)
 _SMA_TTL = timedelta(hours=23)
 # Transaktions-Cache TTL: 1 Stunde
 _TX_TTL = timedelta(hours=1)
+
+# OnVista-Attribute, die pro Aktie aus dem Cache übernommen werden
+_ONVISTA_ATTRS = (
+    ATTR_OV_SMA_20, ATTR_OV_SMA_200,
+    ATTR_OV_RSL_30, ATTR_OV_RSL_250,
+    ATTR_OV_MOMENTUM_30, ATTR_OV_MOMENTUM_250,
+    ATTR_OV_DIVIDENDE, ATTR_OV_DIVIDENDE_RENDITE,
+    ATTR_OV_NAECHSTER_TERMIN, ATTR_OV_SIGNAL,
+    ATTR_OV_KZ_MITTEL, ATTR_OV_KZ_HOCH, ATTR_OV_KZ_TIEF,
+    ATTR_OV_ANALYSTEN_ANZAHL, ATTR_OV_ANALYSTEN_KONSENS,
+    ATTR_OV_ANALYSTEN_BUY, ATTR_OV_ANALYSTEN_HOLD, ATTR_OV_ANALYSTEN_SELL,
+)
 
 
 class MyPortfolioCoordinator(DataUpdateCoordinator):
@@ -119,6 +150,9 @@ class MyPortfolioCoordinator(DataUpdateCoordinator):
         # Bilanz-Cache: [{kuerzel, bezeichnung, ...}]
         self._bilanz_data: list[dict] = []
         self._bilanz_ts: datetime | None = None
+
+        # OnVista-Cache: isin → {..., _fetched_at}  (einmal täglich ab 8 Uhr)
+        self._onvista_cache: dict[str, dict] = {}
 
     # ── Setup ─────────────────────────────────────────────────────────────────
 
@@ -275,6 +309,9 @@ class MyPortfolioCoordinator(DataUpdateCoordinator):
         )
         if fmp_key and fmp_key.strip():
             await self._update_analyst_data(fmp_key.strip(), updated_data)
+
+        # OnVista Technik-/Dividenden-/Termin-/Analystendaten (kein API-Key nötig)
+        await self._update_onvista_data(updated_data)
 
         return updated_data
 
@@ -489,3 +526,36 @@ class MyPortfolioCoordinator(DataUpdateCoordinator):
             stock[ATTR_KZ_ANZAHL]  = analyst.get("analysten_anzahl")
             stock[ATTR_KZ_KONSENS] = analyst.get("analysten_konsens")
             stock[ATTR_KZ_DATUM]   = analyst.get("kursziel_datum")
+
+    # ── OnVista Technik-/Dividenden-/Termin-/Analystendaten ─────────────────────
+
+    @staticmethod
+    def _onvista_due(fetched_at: datetime | None) -> bool:
+        """True, wenn der letzte Abruf vor dem heutigen (bzw. gestrigen) 8-Uhr-Termin lag."""
+        if fetched_at is None:
+            return True
+        now = datetime.now()
+        today_due = now.replace(hour=ONVISTA_FETCH_HOUR, minute=0, second=0, microsecond=0)
+        threshold = today_due if now >= today_due else today_due - timedelta(days=1)
+        return fetched_at < threshold
+
+    async def _update_onvista_data(self, stock_data: dict) -> None:
+        """OnVista-Daten – maximal einmal täglich ab 8 Uhr pro ISIN (kein API-Key nötig)."""
+        from .onvista import fetch_onvista_data
+        for stock_id, stock in stock_data.items():
+            isin = (stock.get(ATTR_ISIN) or "").strip()
+            if not isin:
+                continue
+            cached = self._onvista_cache.get(isin)
+            if cached and not self._onvista_due(cached.get("_fetched_at")):
+                data = cached
+            else:
+                try:
+                    data = await fetch_onvista_data(self._session, isin)
+                    data["_fetched_at"] = datetime.now()
+                    self._onvista_cache[isin] = data
+                except Exception as exc:
+                    _LOGGER.debug("OnVista-Fehler für ISIN '%s': %s", isin, exc)
+                    continue
+            for attr in _ONVISTA_ATTRS:
+                stock[attr] = data.get(attr)

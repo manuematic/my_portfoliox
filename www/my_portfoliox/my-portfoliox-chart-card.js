@@ -121,7 +121,7 @@ class MyPortfolioChartCard extends HTMLElement {
     const n  = prices.length;
 
     const closes    = prices.map(p => p.close);
-    const kzVal     = parseFloat(_getSensorAttr(this._hass, st.symbol, "kursziel_mittel")) || null;
+    const kzVal     = parseFloat(_getSensorAttr(this._hass, st.symbol, "ov_kursziel_mittel")) || null;
     const limOben   = parseFloat(_getSensorAttr(this._hass, st.symbol, "limitoben"))  || null;
     const limUnten  = parseFloat(_getSensorAttr(this._hass, st.symbol, "limitunten")) || null;
     const allVals = [...closes];
@@ -273,16 +273,28 @@ class MyPortfolioChartCard extends HTMLElement {
     const tgTief   = parseFloat(_getSensorAttr(this._hass, sym, "tagestief"));
     const limOben  = parseFloat(_getSensorAttr(this._hass, sym, "limitoben"));
     const limUnten = parseFloat(_getSensorAttr(this._hass, sym, "limitunten"));
-    const kzMittel = parseFloat(_getSensorAttr(this._hass, sym, "kursziel_mittel"));
-    const kzHoch   = parseFloat(_getSensorAttr(this._hass, sym, "kursziel_hoch"));
-    const kzTief   = parseFloat(_getSensorAttr(this._hass, sym, "kursziel_tief"));
-    const konsens  = _getSensorAttr(this._hass, sym, "analysten_konsens");
-    const anzahl   = _getSensorAttr(this._hass, sym, "analysten_anzahl");
 
-    // SMAs aus HA-Sensor-Attributen (Coordinator hat sie berechnet)
-    const sma20val  = parseFloat(_getSensorAttr(this._hass, sym, "sma_20"));
-    const sma50val  = parseFloat(_getSensorAttr(this._hass, sym, "sma_50"));
-    const sma200val = parseFloat(_getSensorAttr(this._hass, sym, "sma_200"));
+    // OnVista – Technik / Dividende / Termine (einmal täglich um 8 Uhr abgerufen)
+    const ovSma20      = parseFloat(_getSensorAttr(this._hass, sym, "ov_sma_20"));
+    const ovSma200     = parseFloat(_getSensorAttr(this._hass, sym, "ov_sma_200"));
+    const ovRsl30      = parseFloat(_getSensorAttr(this._hass, sym, "ov_rsl_30"));
+    const ovRsl250     = parseFloat(_getSensorAttr(this._hass, sym, "ov_rsl_250"));
+    const ovMom30      = parseFloat(_getSensorAttr(this._hass, sym, "ov_momentum_30"));
+    const ovMom250     = parseFloat(_getSensorAttr(this._hass, sym, "ov_momentum_250"));
+    const ovDiv        = parseFloat(_getSensorAttr(this._hass, sym, "ov_dividende"));
+    const ovDivRendite = parseFloat(_getSensorAttr(this._hass, sym, "ov_dividende_rendite"));
+    const ovTermin     = _getSensorAttr(this._hass, sym, "ov_naechster_termin");
+    const ovSignal     = _getSensorAttr(this._hass, sym, "ov_ueberkauft_ueberverkauft");
+
+    // OnVista – Analysten
+    const kzMittel = parseFloat(_getSensorAttr(this._hass, sym, "ov_kursziel_mittel"));
+    const kzHoch   = parseFloat(_getSensorAttr(this._hass, sym, "ov_kursziel_hoch"));
+    const kzTief   = parseFloat(_getSensorAttr(this._hass, sym, "ov_kursziel_tief"));
+    const konsens  = _getSensorAttr(this._hass, sym, "ov_analysten_konsens");
+    const anzahl   = _getSensorAttr(this._hass, sym, "ov_analysten_anzahl");
+    const anzBuy   = _getSensorAttr(this._hass, sym, "ov_analysten_buy");
+    const anzHold  = _getSensorAttr(this._hass, sym, "ov_analysten_hold");
+    const anzSell  = _getSensorAttr(this._hass, sym, "ov_analysten_sell");
 
     // 52W Hoch/Tief aus Kurshistorie
     let w52h = null, w52t = null;
@@ -292,14 +304,6 @@ class MyPortfolioChartCard extends HTMLElement {
       w52t = Math.min(...closes);
     }
 
-    const smaDistRow = (label, val, clr) => {
-      if (isNaN(val) || isNaN(kurs)) return row(label, "–");
-      const dist = ((kurs - val) / val) * 100;
-      return row(label, `${fmt(val, 2)} €`, "var(--primary-text-color)",
-        `&nbsp;<span style="color:${dist>=0?"#22c55e":"#ef4444"};font-size:.75rem">${sign(dist)}${fmt(dist)}%</span>`
-      );
-    };
-
     const upside = (!isNaN(kurs) && !isNaN(kzMittel) && kurs > 0)
       ? ((kzMittel - kurs) / kurs) * 100 : null;
     const gesamtGewinnAbs = (!isNaN(kurs) && !isNaN(kaufkurs) && !isNaN(stueck))
@@ -308,14 +312,28 @@ class MyPortfolioChartCard extends HTMLElement {
     const tgClr  = (!isNaN(tgPct)  && tgPct  >= 0) ? "#22c55e" : "#ef4444";
     const gwClr  = (!isNaN(gewinn) && gewinn >= 0) ? "#22c55e" : "#ef4444";
     const konsensClr = konsens
-      ? (konsens.toLowerCase().includes("buy") ? "#22c55e"
-       : konsens.toLowerCase().includes("sell") ? "#ef4444" : "#f59e0b")
+      ? (konsens.toLowerCase().includes("kaufen") ? "#22c55e"
+       : konsens.toLowerCase().includes("verkaufen") ? "#ef4444" : "#f59e0b")
+      : "var(--secondary-text-color)";
+    const signalClr = ovSignal
+      ? (ovSignal.startsWith("Überkauft") ? "#ef4444"
+       : ovSignal.startsWith("Überverkauft") ? "#22c55e" : "var(--secondary-text-color)")
       : "var(--secondary-text-color)";
 
     const row = (label, value, color = "var(--primary-text-color)", sub = null) => `
       <div class="kz-row">
         <span class="kz-label">${label}</span>
         <span class="kz-value" style="color:${color}">${value}${sub ? `<span class="kz-sub">${sub}</span>` : ""}</span>
+      </div>`;
+    const wrapRow = (label, value) => `
+      <div class="kz-row kz-row-wrap">
+        <span class="kz-label">${label}</span>
+        <span class="kz-value kz-value-wrap">${value}</span>
+      </div>`;
+    const dualRow = (label1, value1, label2, value2) => `
+      <div class="kz-row-dual">
+        <span class="kz-dual-item"><span class="kz-label">${label1}</span><span class="kz-value">${value1}</span></span>
+        <span class="kz-dual-item"><span class="kz-label">${label2}</span><span class="kz-value">${value2}</span></span>
       </div>`;
     const divider = () => `<div class="kz-divider"></div>`;
 
@@ -340,20 +358,37 @@ class MyPortfolioChartCard extends HTMLElement {
         </div>
         ${divider()}
         <div class="info-section">
-          <div class="info-sec-title">Gleitende Ø</div>
-          ${smaDistRow("SMA 20",  sma20val,  "#34d399")}
-          ${smaDistRow("SMA 50",  sma50val,  "#60a5fa")}
-          ${smaDistRow("SMA 200", sma200val, "#a78bfa")}
+          <div class="info-sec-title">OnVista</div>
+          ${dualRow(
+            "SMA 20",  !isNaN(ovSma20)  ? `${fmt(ovSma20)} €`  : "–",
+            "SMA 200", !isNaN(ovSma200) ? `${fmt(ovSma200)} €` : "–"
+          )}
+          ${dualRow(
+            "RSL 30",  !isNaN(ovRsl30)  ? fmt(ovRsl30, 2)  : "–",
+            "RSL 250", !isNaN(ovRsl250) ? fmt(ovRsl250, 2) : "–"
+          )}
+          ${dualRow(
+            "Mom. 30",  !isNaN(ovMom30)  ? fmt(ovMom30, 2)  : "–",
+            "Mom. 250", !isNaN(ovMom250) ? fmt(ovMom250, 2) : "–"
+          )}
+          ${dualRow(
+            "Dividende", !isNaN(ovDiv)        ? `${fmt(ovDiv, 3)} €`      : "–",
+            "Rendite",   !isNaN(ovDivRendite) ? `${fmt(ovDivRendite)}%`   : "–"
+          )}
+          ${ovTermin ? wrapRow("Nächste Termine", ovTermin) : ""}
         </div>
         ${divider()}
         <div class="info-section">
           <div class="info-sec-title">Analysten${anzahl ? ` (${anzahl})` : ""}</div>
-          ${row("Konsens", konsens || "–", konsensClr)}
-          ${row("Kursziel Ø",   kzMittel != null ? `${fmt(kzMittel)} €` : "–")}
-          ${row("KZ Hoch",      kzHoch   != null ? `${fmt(kzHoch)} €`   : "–", "#22c55e")}
-          ${row("KZ Tief",      kzTief   != null ? `${fmt(kzTief)} €`   : "–", "#ef4444")}
+          ${row("Konsens", konsens || "–", konsensClr,
+            (anzBuy != null || anzHold != null || anzSell != null)
+              ? `&nbsp;${anzBuy ?? 0}K / ${anzHold ?? 0}H / ${anzSell ?? 0}V` : null)}
+          ${row("Kursziel Ø",   kzMittel != null && !isNaN(kzMittel) ? `${fmt(kzMittel)} €` : "–")}
+          ${row("KZ Hoch",      kzHoch   != null && !isNaN(kzHoch)   ? `${fmt(kzHoch)} €`   : "–", "#22c55e")}
+          ${row("KZ Tief",      kzTief   != null && !isNaN(kzTief)   ? `${fmt(kzTief)} €`   : "–", "#ef4444")}
           ${row("Upside", upside != null ? `${sign(upside)}${fmt(upside)}%` : "–",
             upside != null ? (upside >= 0 ? "#22c55e" : "#ef4444") : "var(--secondary-text-color)")}
+          ${row("Signal", ovSignal || "–", signalClr)}
         </div>
       </div>`;
   }
@@ -379,7 +414,7 @@ class MyPortfolioChartCard extends HTMLElement {
       `<button class="ind-btn${active ? " active" : ""}"
          onclick="this.getRootNode().host._toggle('${id}')">${label}</button>`;
 
-    const kzVal = _getSensorAttr(this._hass, curSym, "kursziel_mittel");
+    const kzVal = _getSensorAttr(this._hass, curSym, "ov_kursziel_mittel");
 
     let chartContent;
     if (!prices) {
@@ -443,7 +478,7 @@ class MyPortfolioChartCard extends HTMLElement {
           color:var(--secondary-text-color);font-family:'DM Mono',monospace;font-size:.85rem;text-align:center;padding:1rem}
         .info-panel{display:grid;grid-template-columns:repeat(4,1fr);gap:0;
           padding:.5rem 1.2rem .3rem;border-top:1px solid rgba(255,255,255,.06);margin-top:.2rem}
-        .info-section{padding:.3rem .6rem}
+        .info-section{padding:.3rem .6rem;min-width:0}
         .info-section:not(:last-child){border-right:1px solid rgba(255,255,255,.06)}
         .info-sec-title{font-size:.73rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;
           color:var(--secondary-text-color);margin-bottom:.3rem;padding-bottom:.2rem;
@@ -451,8 +486,14 @@ class MyPortfolioChartCard extends HTMLElement {
         .kz-row{display:flex;justify-content:space-between;align-items:baseline;gap:.4rem;padding:.12rem 0}
         .kz-label{font-size:.82rem;color:var(--secondary-text-color);font-family:'Outfit',sans-serif;flex-shrink:0;white-space:nowrap}
         .kz-value{font-size:.88rem;font-family:'DM Mono',monospace;font-weight:500;text-align:right;white-space:nowrap}
-        .kz-sub{font-size:.76rem}
+        .kz-sub{font-size:.76rem;display:block;text-align:right;white-space:nowrap}
         .kz-divider{display:none}
+        .kz-row-wrap{flex-direction:column;align-items:flex-start;gap:.15rem}
+        .kz-value-wrap{white-space:normal;text-align:left;font-size:.78rem;font-weight:400}
+        .kz-row-dual{display:flex;gap:.5rem;padding:.12rem 0}
+        .kz-dual-item{flex:1;display:flex;justify-content:space-between;align-items:baseline;gap:.3rem;min-width:0}
+        .kz-dual-item .kz-label{font-size:.72rem}
+        .kz-dual-item .kz-value{font-size:.8rem}
         .legend{display:flex;gap:1rem;padding:.4rem 1.6rem 0;flex-wrap:wrap}
         .leg-item{display:flex;align-items:center;gap:.35rem;font-size:.80rem;color:var(--secondary-text-color);font-family:'DM Mono',monospace}
         .leg-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
